@@ -1,0 +1,65 @@
+# forge-mirrors: package caches on Ziggurat so forge's image builds and
+# per-run downloads work when the internet is slow or down. Every service
+# is a caching proxy: the first fetch goes out to the internet, every later
+# one is served from Ziggurat's disks.
+#
+#   Ports (none clash with Plex, the *arrs, Kiwix :4242 or the dashboard :8090):
+#     3142  apt-cacher-ng  Debian packages for the toolchain image builds
+#     3141  proxpi         PyPI (pip in image builds, Home Assistant wheels)
+#     4873  Verdaccio      npm (node projects' packages)
+#     3300  Athens         Go modules
+#     5005  registry       Docker Hub pull-through cache (base images)
+#
+# Storage goes under /mnt/user/forge-mirrors (a share - give it as much
+# space as you like; nothing here needs the cache pool).
+# See README.md in this folder for setup on Unraid and on Gemini.
+
+services:
+  apt-cacher-ng:
+    image: mbentley/apt-cacher-ng:latest
+    container_name: forge-apt-cache
+    restart: unless-stopped
+    ports: ["3142:3142"]
+    volumes:
+      - /mnt/user/forge-mirrors/apt-cacher-ng:/var/cache/apt-cacher-ng
+
+  proxpi:
+    image: epicwink/proxpi:latest
+    container_name: forge-pypi-cache
+    restart: unless-stopped
+    ports: ["3141:5000"]
+    environment:
+      PROXPI_CACHE_DIR: /cache
+      PROXPI_CACHE_SIZE: "200000000000"      # 200 GB of wheels and sdists
+    volumes:
+      - /mnt/user/forge-mirrors/pypi:/cache
+
+  verdaccio:
+    image: verdaccio/verdaccio:6
+    container_name: forge-npm-cache
+    restart: unless-stopped
+    ports: ["4873:4873"]
+    volumes:
+      - /mnt/user/appdata/forge-mirrors/verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
+      - /mnt/user/forge-mirrors/npm:/verdaccio/storage
+
+  athens:
+    image: gomods/athens:latest
+    container_name: forge-go-cache
+    restart: unless-stopped
+    ports: ["3300:3000"]
+    environment:
+      ATHENS_STORAGE_TYPE: disk
+      ATHENS_DISK_STORAGE_ROOT: /var/lib/athens
+    volumes:
+      - /mnt/user/forge-mirrors/go:/var/lib/athens
+
+  registry:
+    image: registry:2
+    container_name: forge-docker-cache
+    restart: unless-stopped
+    ports: ["5005:5000"]
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+    volumes:
+      - /mnt/user/forge-mirrors/docker:/var/lib/registry

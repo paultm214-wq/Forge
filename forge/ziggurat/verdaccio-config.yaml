@@ -1,0 +1,20 @@
+# Verdaccio as a read-through cache of the public npm registry for forge.
+# Copy to /mnt/user/appdata/forge-mirrors/verdaccio/config.yaml on Ziggurat.
+storage: /verdaccio/storage
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+    maxage: 30m
+    cache: true
+packages:
+  "@*/*":
+    access: $all
+    publish: $authenticated
+    proxy: npmjs
+  "**":
+    access: $all
+    publish: $authenticated
+    proxy: npmjs
+server:
+  keepAliveTimeout: 60
+log: { type: stdout, format: pretty, level: warn }

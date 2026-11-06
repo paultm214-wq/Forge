@@ -1,0 +1,342 @@
+# Frigate configuration - revised
+# Target: Frigate 0.18, Intel Arc A750 via OpenVINO
+#
+# CHANGES FROM YOUR CURRENT CONFIG
+#   1. Credentials moved to environment substitution (was plaintext x9)
+#   2. MQTT enabled (was false - this is why the HA integration is inert)
+#   3. Object detector defined (was defaulting to CPU)
+#   4. Hardware acceleration for decode
+#   5. Explicit record retention (was unbounded - disk will fill)
+#   6. Snapshots enabled (required for GenAI and for HA integration images)
+#   7. go2rtc restreaming (was 18 direct RTSP connections to 9 cameras)
+#   8. Explicit object list and detect fps
+#
+# BEFORE USING
+#   - Rotate the camera password. The old one was shared in plaintext.
+#   - Set FRIGATE_RTSP_USER / FRIGATE_RTSP_PASSWORD / FRIGATE_MQTT_* in a
+#     .env file next to your compose file, NOT in this config.
+#   - Percent-encode special characters in the password: $ becomes %24,
+#     @ becomes %40, # becomes %23. A literal $ in an RTSP URL is a
+#     plausible cause of intermittent auth failures.
+#   - Set shm_size in docker-compose. The default is too small for nine
+#     cameras and Frigate will crash in ways that do not obviously point
+#     at shared memory. Frigate's docs give the formula.
+
+mqtt:
+  enabled: true
+  host: 192.168.50.XXX          # <-- your HA VM / Mosquitto broker
+  port: 1883
+  user: "{FRIGATE_MQTT_USER}"
+  password: "{FRIGATE_MQTT_PASSWORD}"
+  topic_prefix: frigate
+  # If you parallel-run old and new instances during a migration, change
+  # topic_prefix on ONE of them so they do not fight over the same topics.
+
+# ---------------------------------------------------------------------------
+# Object detection
+# ---------------------------------------------------------------------------
+# Two detector processes because one may not keep up across nine cameras.
+# Both target the same GPU; they are separate inference workers, not separate
+# devices. Drop to one if the Arc is saturated.
+#
+# If the Arc is NOT yet passed through, comment this whole block out and
+# Frigate falls back to the CPU detector as it does today.
+
+detectors:
+  ov_0:
+    type: openvino
+    device: GPU
+  ov_1:
+    type: openvino
+    device: GPU
+
+# Leaving `model:` unset uses Frigate's bundled default, which is the right
+# starting point. Only specify a custom model once you have a baseline and a
+# reason - a mismatched model_type/input_tensor is a common startup crash.
+
+# ---------------------------------------------------------------------------
+# Decode
+# ---------------------------------------------------------------------------
+
+ffmpeg:
+  hwaccel_args: preset-vaapi
+  input_args: preset-rtsp-generic
+  # Only detect-role streams are decoded. Record-role streams are copied
+  # to disk without transcoding, so hwaccel matters less here than you
+  # might expect - this is mostly for the four detecting cameras.
+
+# ---------------------------------------------------------------------------
+# go2rtc restreaming
+# ---------------------------------------------------------------------------
+# Your current config opens two RTSP connections per camera, 18 total. Several
+# camera firmwares (Reolink especially) get unhappy with concurrent sessions.
+# go2rtc connects once per stream and fans out to Frigate, live view, and HA.
+#
+# Replicate the pattern below for all nine. Keep the sub/main split.
+
+go2rtc:
+  streams:
+    dining_room:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.201:554/stream0"
+    dining_room_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.201:554/stream1"
+    jeep:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.114:554/stream0"
+    jeep_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.114:554/stream1"
+    gym:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.164:554/stream0"
+    gym_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.164:554/stream1"
+    front_yard:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.131:554/stream0"
+    front_yard_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.131:554/stream1"
+    theater:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.118:554/Preview_01_main"
+    theater_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.118:554/Preview_01_sub"
+    office:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.214:554/stream0"
+    office_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.214:554/stream1"
+    porch:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.33:554/Preview_01_main"
+    porch_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.33:554/Preview_01_sub"
+    kitchen:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.105:554/cam/realmonitor?channel=1&subtype=0"
+    kitchen_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.105:554/cam/realmonitor?channel=1&subtype=1"
+    back_yard:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.170:554/stream0"
+    back_yard_sub:
+      - "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@192.168.50.170:554/stream1"
+
+# ---------------------------------------------------------------------------
+# Global defaults - cameras inherit and may override
+# ---------------------------------------------------------------------------
+
+detect:
+  enabled: false        # opt IN per camera, matching your current intent
+  fps: 5                # 5 is plenty for person/car; higher just burns GPU
+
+objects:
+  track:
+    - person
+    - car
+    - dog
+    - cat
+  filters:
+    person:
+      min_score: 0.5
+      threshold: 0.7
+    car:
+      min_score: 0.5
+      threshold: 0.7
+
+record:
+  enabled: true
+  retain:
+    days: 3             # continuous footage
+    mode: motion
+  alerts:
+    retain:
+      days: 30
+  detections:
+    retain:
+      days: 30
+  # Nine cameras recording main streams 24/7 will consume storage quickly.
+  # Size /media deliberately; these numbers are a conservative start.
+
+snapshots:
+  enabled: true
+  timestamp: false
+  bounding_box: true
+  retain:
+    default: 14
+  # Required for GenAI descriptions and for the HA integration to show
+  # event images. Off by default, which is why you have none today.
+
+# ---------------------------------------------------------------------------
+# Enrichments
+# ---------------------------------------------------------------------------
+# These are independent of object detection. Per Frigate's docs, OpenVINO is
+# auto-detected and used for enrichments in the default image - no extra
+# config needed once the Arc is visible to the container.
+#
+# These four are the real CPU load in your current setup, not ffmpeg.
+# Consider enabling them one at a time and watching the System page rather
+# than all at once, so you can attribute any slowdown.
+
+semantic_search:
+  enabled: true
+  model_size: small     # 'large' is GPU-accelerated; try it after the Arc
+                        # is working and you have headroom
+
+face_recognition:
+  enabled: true
+  model_size: small
+
+lpr:
+  enabled: true
+
+classification:
+  bird:
+    enabled: true
+
+# ---------------------------------------------------------------------------
+# GenAI - verify against the 0.18 docs before enabling
+# ---------------------------------------------------------------------------
+# The GenAI config schema moved in recent releases, so treat the block below
+# as a sketch rather than something to paste verbatim. Check
+# docs.frigate.video for the current shape.
+#
+# genai:
+#   provider: openai
+#   base_url: http://192.168.50.96:8080/v1
+#   api_key: "{FRIGATE_GENAI_KEY}"
+#   model: qwen3.8-27b
+#
+# Then enable per camera, on the outdoor ones only. Every event becomes an
+# image-prefill request competing with your voice pipeline for the same GPUs,
+# so be selective about cameras and objects.
+
+# ---------------------------------------------------------------------------
+# Cameras
+# ---------------------------------------------------------------------------
+# Streams now come from go2rtc rather than directly from the cameras.
+# Detection stays enabled on the four you had it on. With the Arc doing the
+# work you can afford to enable more - the indoor ones are a judgement call
+# about whether you want events from rooms you occupy.
+
+cameras:
+  dining_room:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/dining_room_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/dining_room
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  jeep:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/jeep_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/jeep
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Vehicle-focused. LPR will be most useful here.
+
+  gym:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/gym_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/gym
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  front_yard:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/front_yard_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/front_yard
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Add a motion mask over the street and any tree canopy. Without one,
+    # passing traffic and moving branches will generate constant events and
+    # drown the useful ones.
+    # motion:
+    #   mask:
+    #     - 0,0,1000,0,1000,200,0,200
+
+  theater:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/theater_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/theater
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  office:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/office_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/office
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  porch:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/porch_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/porch
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Best candidate for face recognition - people approach the camera at a
+    # usable angle and distance here.
+
+  kitchen:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/kitchen_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/kitchen
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  back_yard:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/back_yard_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/back_yard
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Likely where bird classification pays off. Consider a zone around any
+    # feeder rather than classifying the whole frame.
+
+version: 0.18-0

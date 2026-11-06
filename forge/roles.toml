@@ -1,0 +1,79 @@
+# forge's machine roles from 30 October 2026 - the sections apply-roles.py
+# puts into ~/forge/config.toml (the rest of your config stays as it is).
+#
+#   Vulcan   principal coder: Strata (Qwen3.8-Flash-Next, experts in RAM) on
+#            :8081; Hunyuan3D only for specs with 3D shapes (Strata pauses)
+#   Apollo   coder (TielCoder router) and the primary image server
+#   Mercury  Lightning images, and triage: the first diagnosis and test audit
+#            of a failing chunk, off the planner
+#   Gemini   planner, reviewer - unchanged
+
+[coder]                   # Vulcan: the principal coder - Strata
+machine = "vulcan"        # its GPU pauses for the 3D shape model, when a spec has one
+url = "http://192.168.50.151:8081"
+model = "strata"          # Strata answers to any model name
+kind = "qwen38"           # Qwen3.8 family: thinking via reasoning_effort
+reasoning_top_level = true   # Strata reads reasoning_effort from the request itself
+no_think_effort = "none"  # "direct" attempts must not think (they did: 28000 tokens each)
+api_key_file = "~/.coder-api-key-strata"   # from `strata launch --show-key` on Vulcan
+switch_models = false     # forge's per-language models do not apply to Strata
+context = 65536           # must match Strata's --context on Vulcan
+max_tokens = 28000
+thinking_max_tokens = 32000
+temperature = 0.2
+thinking_temperature = 0.6
+retry_minutes = 15        # Strata restarting (after 3D models): wait, don't fail the run
+
+# Helper coders run the chunk's retry ladder beside the principal coder; a
+# machine that also renders codes only when its renders are done.
+[[coders]]
+name = "apollo"
+url = "http://192.168.50.8:8080"
+model = "tiel-coder"
+kind = "tiel"             # thinking via enable_thinking
+api_key_file = "~/.coder-api-key"
+image_server = "apollo"   # the [[images.servers]] entry sharing this GPU
+context = 65536           # matches c = 65536 in Apollo's coder-presets.ini
+
+[[coders]]
+name = "mercury"
+enabled = false           # Mercury triages now (below); its coder never won an attempt
+url = "http://192.168.50.129:8080"
+model = "tiel-coder"
+kind = "tiel"
+api_key_file = "~/.coder-api-key-mercury"
+image_server = "mercury"
+context = 65536
+thinking = false
+
+[triage]                  # first diagnosis and first test audit of a failing chunk
+enabled = true            # off: the planner does both, as before
+url = "http://192.168.50.129:8080"   # Mercury's router (loads TielCoder on demand)
+model = "tiel-coder"
+kind = "tiel"
+api_key_file = "~/.coder-api-key-mercury"
+machine = "mercury"       # waits for nothing: while Mercury renders, the planner does it
+context = 65536
+max_tokens = 16000        # audits and diagnoses answer without thinking; more room for the prompt
+thinking_max_tokens = 16000
+uses = ["diagnose", "audit"]
+
+[[images.servers]]
+name = "apollo"
+url = "http://192.168.50.8:7860"
+speed = 2                 # a starting guess (9070 XT vs Mercury's 9060 XT) until measured
+max_hr_scale = 1.5        # Vulkan: a 2x 4K hires pass crashed Mercury's GPU; assume the same
+
+[[images.servers]]
+name = "mercury"
+url = "http://192.168.50.129:7860"
+max_hr_scale = 1.5
+speed = 1
+lightning = true          # every job with the 4-step Lightning LoRA
+
+[[shapes.servers]]
+name = "vulcan"
+url = "http://192.168.50.151:7870"
+machine = "vulcan"        # stops Strata while it holds the GPU, starts it again after
+free_cmd = "systemctl --user stop strata"     # before the first model of a run (ssh vulcan)
+restore_cmd = "systemctl --user start strata" # once the shape server lets go of the GPU

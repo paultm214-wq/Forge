@@ -1,0 +1,26 @@
+[
+  {
+    "source": "uploaded",
+    "check": "cross-origin control",
+    "http_status": 202,
+    "actions_executed": 1
+  },
+  {
+    "source": "uploaded",
+    "check": "missing published digest",
+    "exit_code": 0,
+    "model_state": "ready"
+  },
+  {
+    "source": "fixed",
+    "check": "cross-origin control",
+    "http_status": 403,
+    "actions_executed": 0
+  },
+  {
+    "source": "fixed",
+    "check": "missing published digest",
+    "exit_code": 1,
+    "model_state": "failed"
+  }
+]

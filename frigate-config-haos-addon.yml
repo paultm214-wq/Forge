@@ -1,0 +1,553 @@
+# Frigate configuration - Home Assistant OS add-on + Intel Arc A750 passthrough
+#
+# Install to:  /addon_configs/<slug>/config.yml
+#   where <slug> is ccab4aaf_frigate-fa for the Full Access variant.
+#   Check the actual directory name via the Terminal add-on - it varies.
+#   The filename MUST be config.yml, not frigate.yml. Getting this wrong is
+#   the usual cause of "Frigate ignores my config and shows a demo camera
+#   at 10.0.10.10".
+#
+# ===========================================================================
+# THREE THINGS TO DO BEFORE THIS CONFIG WILL WORK
+# ===========================================================================
+#
+# 1. USE THE "FRIGATE NVR (FULL ACCESS)" ADD-ON, NOT THE STANDARD ONE.
+#    The standard add-on runs with Protection Mode enabled, which blocks
+#    /dev/dri access. Users have hit exactly this and had to switch. Coral
+#    USB works on the standard add-on; DRI devices do not.
+#
+# 2. MOVE THE GPU, DON'T RE-DO THE PASSTHROUGH.
+#    The Arc is already bound to vfio-pci for your tiny11 VM, so the host
+#    side is done. Shut down tiny11, remove its hostpci entry, and add the
+#    same device to the HAOS VM:
+#
+#        hostpci0: 0000:XX:00,pcie=1
+#
+#    Requirements on the HAOS VM: machine type q35, BIOS OVMF (UEFI), and
+#    ballooning DISABLED. Frigate's docs call out disabling ballooning
+#    specifically when passing through a GPU.
+#
+#    Host BIOS: Above 4G Decoding and Resizable BAR both enabled. Arc
+#    Alchemist needs large BAR support and behaves badly without it.
+#
+# 3. SIZE YOUR STORAGE FIRST.
+#    Nine cameras recording main streams land on the HAOS VM's data disk.
+#    That disk is not large by default and HAOS does not make it trivial to
+#    bolt on a second one - use the Supervisor "move data disk" feature to
+#    relocate /mnt/data to a larger virtual disk BEFORE you start recording,
+#    not after it fills.
+#
+# ===========================================================================
+# KNOWN RISK OF THIS PATH - worth reading once
+# ===========================================================================
+# GPU acceleration under the HAOS add-on has broken across HAOS releases
+# more than once. HAOS 15.0 broke ffmpeg hwaccel when the kernel moved to
+# 6.12 and Frigate's userspace Intel driver stopped matching. Users reported
+# DRI access breaking again on HAOS 17.x even with the Full Access add-on.
+#
+# You cannot patch around this from inside HAOS; you wait for a fix. If
+# Frigate is load-bearing for you, pin your HAOS version and read release
+# notes before updating - or accept that the standalone Debian VM exists
+# precisely to take this failure mode off the table.
+#
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Credentials - inline, because the add-on gives no alternative
+# ---------------------------------------------------------------------------
+# An earlier version of this file put credentials in an `environment_vars`
+# block and referenced them as {FRIGATE_RTSP_USER} etc. That does NOT work.
+#
+# `environment_vars` sets environment variables for the ffmpeg and go2rtc
+# SUBPROCESSES that Frigate spawns. It does not feed Frigate's own config
+# parser, which resolves {FRIGATE_*} against the real process environment at
+# validation time. Hence:
+#
+#     File "/opt/frigate/frigate/config/env.py", line 61
+#     raise KeyError(key)
+#     KeyError: 'FRIGATE_MQTT_USER'
+#
+# Frigate's maintainers are explicit that moving secrets out of the config
+# file is not supported for add-on installs - only for direct Docker, where
+# real environment variables can be injected via env_file.
+#
+# So the credentials are inline below. This is what your original config did
+# too, and it costs nothing you had: the add-on path was never going to keep
+# them out of this file.
+#
+# TREAT THIS FILE AS A SECRET. Do not paste it into forums or issue reports
+# without redacting, and do not commit it to a public repository.
+#
+# Still rotate the camera password - it was shared in plaintext and should be
+# considered compromised. Replace CHANGE_ME_camera_password in this local
+# deployment copy with a newly rotated, URL-encoded camera password.
+#
+# Percent-encode reserved characters (for example $ as %24) inside RTSP URLs.
+
+environment_vars:
+  # This block IS still valid and useful - just not for secrets. Its real
+  # purpose is setting environment variables for the ffmpeg/go2rtc
+  # subprocesses, which is exactly what LIBVA_DRIVER_NAME needs.
+  #
+  # iHD is the correct VA-API driver for Arc. The older i965 driver targets
+  # pre-Broadwell Intel graphics and will not work. If hardware acceleration
+  # silently stops after a HAOS update, check this first - the symptom is
+  # "VAAPI detected but GPU stays at 0%".
+  LIBVA_DRIVER_NAME: iHD
+
+# ---------------------------------------------------------------------------
+
+mqtt:
+  enabled: true
+  host: 192.168.50.162          # HAOS. Not localhost - the Frigate add-on is
+                                # its own container, so loopback would resolve
+                                # to Frigate itself, not the broker.
+                                #
+                                # core-mosquitto also works here and is more
+                                # robust: it is the Supervisor's internal DNS
+                                # name for the Mosquitto add-on, so it keeps
+                                # working if the HAOS IP ever changes. Swap to
+                                # it if you prefer.
+  port: 1883
+  user: frigate
+  password: CHANGE_ME_mqtt_password
+  topic_prefix: frigate
+
+# ---------------------------------------------------------------------------
+# Object detection - Intel Arc A750 via OpenVINO
+# ---------------------------------------------------------------------------
+# Two detector workers because one may not keep up across nine cameras. Both
+# target the same GPU - these are parallel inference processes, not separate
+# devices. Drop to one if the Arc saturates.
+#
+# Leaving `model:` unset uses Frigate's bundled default. Do not specify a
+# custom model until you have a working baseline; a mismatched model_type or
+# input_tensor is a common and confusing startup crash.
+#
+# IF THE ARC IS NOT YET PASSED THROUGH, comment this block out entirely.
+# Frigate falls back to the CPU detector, exactly as it behaves today.
+
+# Single detector worker, GPU. The A750 is confirmed visible on the System
+# page, so this should bind to the Arc rather than falling back.
+#
+# VERIFY AFTER RESTART: System > Detectors should read ov_0 / openvino with
+# inference around 10ms. OpenVINO will happily fall back to CPU and still
+# call itself OpenVINO, so the inference TIME is the proof, not the label.
+# CPU numbers look like 50-150ms.
+#
+# If this brings back "TypeError: buffer is too small for requested array"
+# across all nine cameras, OpenVINO failed to initialise on the GPU. The
+# real error will be the first OpenVINO line in the log - the nine camera
+# tracebacks are downstream noise from the dead detector.
+
+detectors:
+  ov_0:
+    type: openvino
+    device: GPU
+
+# REQUIRED when using the bundled OpenVINO model. Without this block Frigate
+# falls back to its default model dimensions, which do not match the model
+# actually loaded, so the shared-memory segment it sizes for detection input
+# is too small. Every camera process then dies mapping it:
+#
+#     File "/opt/frigate/frigate/object_detection/base.py", line 401
+#     TypeError: buffer is too small for requested array
+#
+# That is why thumbnails vanished the moment the GPU detector was enabled,
+# while detect FPS still read 5/camera: the CAPTURE threads were healthy and
+# writing frames, but the camera PROCESSOR processes were dead, so nothing
+# consumed them. Same reason the log shows "Too many unprocessed recording
+# segments ... This likely indicates an issue with the detect stream".
+#
+# labelmap_path is not optional either. This model uses COCO's 91-class
+# layout where class 0 is background and class 1 is person. Frigate's
+# internal default starts at class 0 = person, so omitting the labelmap
+# shifts every detection by one and people get reported as bicycles.
+
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+
+# Second worker. Add it only once ov_0 is confirmed working AND the detector
+# is actually saturated - with four cameras at 5fps you may never need it.
+# To enable, append these three lines to the block above at this exact
+# indentation (two spaces for ov_1, four for its children):
+#
+#~~~~ ov_1:
+#~~~~~~ type: openvino
+#~~~~~~ device: GPU
+#
+# The ~ marks are placeholders for spaces, so you cannot accidentally leave
+# a stray one behind. An earlier version of this file used "# " prefixes and
+# stripping only the "#" left a leading space, which moved detectors: to
+# column 2 and produced:
+#     ParserError: expected <block end>, but found <block mapping start>
+
+# ---------------------------------------------------------------------------
+# Decode
+# ---------------------------------------------------------------------------
+# Only detect-role streams get decoded. Record-role streams are copied to
+# disk without transcoding, so this affects your four detecting cameras -
+# less than "nine cameras" would suggest.
+
+ffmpeg:
+  hwaccel_args: preset-vaapi
+  input_args: preset-rtsp-generic
+
+# ---------------------------------------------------------------------------
+# go2rtc restreaming
+# ---------------------------------------------------------------------------
+# Your current config opens 18 direct RTSP sessions across nine cameras.
+# go2rtc connects once per stream and fans out to Frigate, live view and HA.
+# This matters most for the two Reolinks (theater, porch) - that firmware
+# handles concurrent sessions poorly.
+
+go2rtc:
+  streams:
+    dining_room:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.201:554/stream0"
+    dining_room_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.201:554/stream1"
+    jeep:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.114:554/stream0"
+    jeep_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.114:554/stream1"
+    gym:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.164:554/stream0"
+    gym_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.164:554/stream1"
+    front_yard:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.131:554/stream0"
+    front_yard_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.131:554/stream1"
+    theater:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.118:554/Preview_01_main"
+    theater_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.118:554/Preview_01_sub"
+    office:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.214:554/stream0"
+    office_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.214:554/stream1"
+    porch:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.33:554/Preview_01_main"
+    porch_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.33:554/Preview_01_sub"
+    # kitchen is at .107, not .105. The earlier go2rtc 404s were a symptom of
+    # that, not of the query string in the URL: go2rtc could not reach the
+    # source, so it never registered the stream, and ffmpeg asking for a
+    # name go2rtc does not have gets a 404.
+    kitchen:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.107:554/cam/realmonitor?channel=1&subtype=0"
+    kitchen_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.107:554/cam/realmonitor?channel=1&subtype=1"
+    back_yard:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.170:554/stream0"
+    back_yard_sub:
+      - "rtsp://admin:CHANGE_ME_camera_password@192.168.50.170:554/stream1"
+
+# ---------------------------------------------------------------------------
+# Global defaults - cameras inherit and may override
+# ---------------------------------------------------------------------------
+
+detect:
+  enabled: false        # opt IN per camera, matching your current intent
+  fps: 5                # plenty for person/car; higher just burns GPU
+
+objects:
+  track:
+    - person
+    - car
+    - dog
+    - cat
+  filters:
+    person:
+      min_score: 0.5
+      threshold: 0.7
+    car:
+      min_score: 0.5
+      threshold: 0.7
+
+record:
+  enabled: true
+  # 0.17 replaced the old `record.retain: {days, mode}` block with tiered
+  # retention. `retain` at this level is now rejected outright - that was the
+  # "record -> retain - Extra inputs are not permitted" error.
+  #
+  # The tiers cascade, each one a filter on what survives longer:
+  #   continuous  everything, motion or not
+  #   motion      only segments containing motion
+  #   alerts      segments overlapping an alert
+  #   detections  segments overlapping a detection
+  #
+  # So this config keeps all footage for 1 day; after that only motion for a
+  # week; after that only motion overlapping alerts or detections for a month.
+  #
+  # Note `alerts` and `detections` still use a nested `retain:` block - only
+  # the top-level one was removed. Easy to get wrong when editing by hand.
+  #
+  # Starting at 1 day continuous deliberately: nine cameras writing main
+  # streams to the HAOS data disk adds up fast, and continuous recording is
+  # disabled entirely by default in 0.17+. Raise it once you have measured a
+  # day of actual consumption on your disk.
+  continuous:
+    days: 1
+  motion:
+    days: 7
+  alerts:
+    retain:
+      days: 30
+      mode: all
+  detections:
+    retain:
+      days: 30
+      mode: all
+
+snapshots:
+  enabled: true
+  timestamp: false
+  bounding_box: true
+  retain:
+    default: 14
+  # Off by default, which is why you have no event images in Home Assistant.
+  # Also a prerequisite for GenAI descriptions.
+
+# ---------------------------------------------------------------------------
+# Enrichments
+# ---------------------------------------------------------------------------
+# Independent of object detection. OpenVINO is auto-detected and used for
+# enrichments in the default Frigate image - no extra config once the Arc is
+# visible to the container.
+#
+# These four are the real CPU load in your current setup, not ffmpeg. Enable
+# them ONE AT A TIME, watching the System page between each, so you can
+# attribute any slowdown instead of guessing across four features at once.
+
+semantic_search:
+  enabled: true
+  model_size: small     # 'large' is GPU-accelerated; try it once the Arc is
+                        # confirmed working and you have headroom
+
+face_recognition:
+  enabled: true
+  model_size: small
+
+lpr:
+  enabled: true
+
+classification:
+  bird:
+    enabled: true
+
+# ---------------------------------------------------------------------------
+# GenAI - 0.18 schema
+# ---------------------------------------------------------------------------
+# 0.18 made `genai` a MAP OF NAMED PROVIDERS rather than a flat block. Putting
+# provider/base_url/api_key/model directly under genai gives:
+#     genai -> provider - Input should be a valid dictionary or instance of
+#     GenAIConfig
+# because Frigate expects each key under genai to be a provider NAME whose
+# value is that provider's settings.
+#
+# 0.18 also added a dedicated `llamacpp` provider, which is the right one
+# here - it probes the server for the model and context size automatically.
+# Do NOT use the `openai` provider for this: in 0.16 it silently ignored
+# base_url and sent everything to api.openai.com, which validated cleanly and
+# failed with 401s buried in the logs.
+#
+# NOTE the base_url has NO /v1 suffix for this provider, unlike the
+# OpenAI-compatible endpoint you give Home Assistant and Open WebUI.
+#
+# `local` below is an arbitrary name. It is referenced elsewhere in the
+# config (semantic_search.model, for instance), so pick something you are
+# happy to keep - the UI will not let you rename a provider afterwards.
+#
+# ROLES decide what this provider is used for:
+#   descriptions  object descriptions from tracked-object frames
+#   chat          0.18's Chat interface - a tool-calling agent with access to
+#                 your cameras, tracked objects and review activity
+#   embeddings    semantic search vectors
+#
+# Starting with descriptions and chat only. Leave embeddings to Frigate's own
+# local model for now: routing every embedding through a 27B on another box
+# would add latency to indexing for no obvious gain.
+
+genai:
+  local:
+    provider: llamacpp
+    base_url: http://192.168.50.96:8080
+    model: qwen3.8-27b
+    api_key: CHANGE_ME_llama_api_key   # contents of ~/.llama-api-key on the
+                                       # LLM box. Remove this line if the
+                                       # llamacpp provider rejects it - the
+                                       # docs example omits it.
+    roles:
+      - descriptions
+      - chat
+
+# Per-camera enablement is best done from Settings in the UI. 0.18 applies
+# GenAI config changes dynamically without a restart, so experimenting there
+# is cheap. Enable it on the outdoor cameras only - every event becomes an
+# image-prefill request on the 5700G box, competing with your voice pipeline
+# for the same two GPUs.
+
+# ---------------------------------------------------------------------------
+# Cameras
+# ---------------------------------------------------------------------------
+# WHY THESE SAY 127.0.0.1 AND NOT THE CAMERA IPs
+#
+# This is intentional, and it is the whole point of the go2rtc section above.
+# There are two hops now, not one:
+#
+#     camera (192.168.50.x)  --->  go2rtc  --->  Frigate
+#                                (one connection   (loopback, inside the
+#                                 out to each       same container)
+#                                 camera)
+#
+# go2rtc is embedded in Frigate and listens on 127.0.0.1:8554 inside the
+# add-on container. It holds the only sessions to your cameras; Frigate then
+# reads from go2rtc over loopback. The real camera IPs and credentials live
+# once, in the go2rtc streams block.
+#
+# Put the camera IPs back here and you undo the benefit: you would be back to
+# 18 direct RTSP sessions, with go2rtc adding 18 more on top.
+#
+# The stream names must match the go2rtc keys exactly - dining_room_sub here
+# maps to the dining_room_sub stream defined above. A typo produces a camera
+# that never starts, with a connection-refused error pointing at 127.0.0.1.
+#
+# Detection stays on the same four you had it on; with the Arc doing the work
+# you can afford more, but whether you want events from occupied rooms is a
+# judgement call, not a performance one.
+
+cameras:
+  dining_room:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/dining_room_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/dining_room
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  jeep:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/jeep_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/jeep
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Vehicle-focused, so LPR will earn its keep here more than elsewhere.
+
+  gym:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/gym_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/gym
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  front_yard:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/front_yard_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/front_yard
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Draw a motion mask over the street and any tree canopy using the mask
+    # editor in the Frigate UI. Without one, passing traffic and moving
+    # branches generate constant events and bury the ones you care about.
+
+  theater:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/theater_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/theater
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  office:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/office_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/office
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  porch:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/porch_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/porch
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Best candidate for face recognition - people approach at a usable angle
+    # and distance here.
+
+  kitchen:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/kitchen_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/kitchen
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: false
+
+  back_yard:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/back_yard_sub
+          input_args: preset-rtsp-restream
+          roles: [detect]
+        - path: rtsp://127.0.0.1:8554/back_yard
+          input_args: preset-rtsp-restream
+          roles: [record]
+    detect:
+      enabled: true
+    # Likely where bird classification pays off. Consider scoping it to a
+    # zone around any feeder rather than the whole frame.
+
+version: 0.18-0

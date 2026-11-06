@@ -1,0 +1,612 @@
+FFFFFFFFFFFFFFFFFF.FF......FF....                                        [100%]
+=================================== FAILURES ===================================
+__________________ test_plan_rejects_path_ids[../../escaped] ___________________
+
+cid = '../../escaped'
+
+    @pytest.mark.parametrize("cid", ["../../escaped", "/tmp/escaped", "a/b", "..", "x\n"])
+    def test_plan_rejects_path_ids(cid):
+>       assert forge.validate_plan({"project": "demo", "chunks": [chunk(cid)]})
+E       AssertionError: assert []
+E        +  where [] = <function validate_plan at 0x7fb66226c9a0>({'chunks': [{'id': '../../escaped', 'spec': 'return one', 'verify': 'assert True'}], 'project': 'demo'})
+E        +    where <function validate_plan at 0x7fb66226c9a0> = forge.validate_plan
+
+tests/test_package_review.py:17: AssertionError
+___________________ test_plan_rejects_path_ids[/tmp/escaped] ___________________
+
+cid = '/tmp/escaped'
+
+    @pytest.mark.parametrize("cid", ["../../escaped", "/tmp/escaped", "a/b", "..", "x\n"])
+    def test_plan_rejects_path_ids(cid):
+>       assert forge.validate_plan({"project": "demo", "chunks": [chunk(cid)]})
+E       AssertionError: assert []
+E        +  where [] = <function validate_plan at 0x7fb66226c9a0>({'chunks': [{'id': '/tmp/escaped', 'spec': 'return one', 'verify': 'assert True'}], 'project': 'demo'})
+E        +    where <function validate_plan at 0x7fb66226c9a0> = forge.validate_plan
+
+tests/test_package_review.py:17: AssertionError
+_______________________ test_plan_rejects_path_ids[a/b] ________________________
+
+cid = 'a/b'
+
+    @pytest.mark.parametrize("cid", ["../../escaped", "/tmp/escaped", "a/b", "..", "x\n"])
+    def test_plan_rejects_path_ids(cid):
+>       assert forge.validate_plan({"project": "demo", "chunks": [chunk(cid)]})
+E       AssertionError: assert []
+E        +  where [] = <function validate_plan at 0x7fb66226c9a0>({'chunks': [{'id': 'a/b', 'spec': 'return one', 'verify': 'assert True'}], 'project': 'demo'})
+E        +    where <function validate_plan at 0x7fb66226c9a0> = forge.validate_plan
+
+tests/test_package_review.py:17: AssertionError
+________________________ test_plan_rejects_path_ids[..] ________________________
+
+cid = '..'
+
+    @pytest.mark.parametrize("cid", ["../../escaped", "/tmp/escaped", "a/b", "..", "x\n"])
+    def test_plan_rejects_path_ids(cid):
+>       assert forge.validate_plan({"project": "demo", "chunks": [chunk(cid)]})
+E       AssertionError: assert []
+E        +  where [] = <function validate_plan at 0x7fb66226c9a0>({'chunks': [{'id': '..', 'spec': 'return one', 'verify': 'assert True'}], 'project': 'demo'})
+E        +    where <function validate_plan at 0x7fb66226c9a0> = forge.validate_plan
+
+tests/test_package_review.py:17: AssertionError
+_______________________ test_plan_rejects_path_ids[x\n] ________________________
+
+cid = 'x\n'
+
+    @pytest.mark.parametrize("cid", ["../../escaped", "/tmp/escaped", "a/b", "..", "x\n"])
+    def test_plan_rejects_path_ids(cid):
+>       assert forge.validate_plan({"project": "demo", "chunks": [chunk(cid)]})
+E       AssertionError: assert []
+E        +  where [] = <function validate_plan at 0x7fb66226c9a0>({'chunks': [{'id': 'x\n', 'spec': 'return one', 'verify': 'assert True'}], 'project': 'demo'})
+E        +    where <function validate_plan at 0x7fb66226c9a0> = forge.validate_plan
+
+tests/test_package_review.py:17: AssertionError
+_____________________ test_verified_writer_rejects_escape ______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-4/test_verified_writer_rejects_e0')
+
+    def test_verified_writer_rejects_escape(tmp_path):
+        run = make_run(tmp_path)
+>       with pytest.raises(forge.ForgeError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'forge.ForgeError'>
+
+tests/test_package_review.py:23: Failed
+________________ test_commit_never_follows_base_project_symlink ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-4/test_commit_never_follows_base0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e7e00>
+
+    def test_commit_never_follows_base_project_symlink(tmp_path, monkeypatch):
+        run = make_run(tmp_path, plan={"project": "demo", "chunks": [chunk()]})
+        (run.root / "module.py").write_text("VALUE = 1\n")
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        sentinel = outside / "keep.txt"
+        sentinel.write_text("precious")
+        repo = tmp_path / "repo"
+        (repo / ".git").mkdir(parents=True)
+    
+        def git(root, *args, **kw):
+            if args[:2] == ("worktree", "add"):
+                wt = Path(args[-2])
+                (wt / "projects").mkdir(parents=True)
+                (wt / "projects" / "demo").symlink_to(outside, target_is_directory=True)
+            return type("P", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+    
+        monkeypatch.setattr(forge, "git", git)
+>       with pytest.raises(forge.ForgeError, match="symlink|outside"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'forge.ForgeError'>
+
+tests/test_package_review.py:46: Failed
+____________ test_bad_tokenizer_reply_is_not_zero_tokens[response0] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e6120>
+response = {}
+
+    @pytest.mark.parametrize("response", [{}, [], {"tokens": "123"}, {"tokens": None}])
+    def test_bad_tokenizer_reply_is_not_zero_tokens(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused"})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+>       with pytest.raises(forge.ForgeError, match="token"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'forge.ForgeError'>
+
+tests/test_package_review.py:55: Failed
+____________ test_bad_tokenizer_reply_is_not_zero_tokens[response1] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e7e30>
+response = []
+
+    @pytest.mark.parametrize("response", [{}, [], {"tokens": "123"}, {"tokens": None}])
+    def test_bad_tokenizer_reply_is_not_zero_tokens(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused"})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+        with pytest.raises(forge.ForgeError, match="token"):
+>           llm.tokens("a large prompt")
+
+tests/test_package_review.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <forge.LLM object at 0x7fb6622e7980>, text = 'a large prompt'
+
+    def tokens(self, text: str) -> int:
+        """Exact count from the server's own tokenizer - or, for a server
+        without /tokenize (Strata), a generous estimate."""
+        if self.tok_delegate is not None and self.tok_delegate.model == self.model:
+            return self.tok_delegate.tokens(text)   # same model elsewhere: one tokenizer
+        if getattr(self, "no_tokenize", False):
+            return estimate_tokens(text)
+        key = hashlib.sha256((self.model + "\0" + text).encode("utf-8", "surrogatepass")).hexdigest()
+        with self._toklock:
+            if key in self._tokcache:
+                self._tokcache.move_to_end(key)
+                return self._tokcache[key]
+        # "model" routes the call in llama-server's router mode; a
+        # single-model server ignores it.
+        try:
+            data = self._post_retrying("/tokenize", {"content": text, "model": self.model},
+                                       timeout=60)
+        except ForgeError as exc:
+            if not re.search(r"HTTP (404|405|501)", str(exc)):
+                raise
+            # No tokenizer endpoint: count by estimate from now on.
+            self.no_tokenize = True
+            log(f"{self.name}: no /tokenize on this server - estimating prompt sizes "
+                f"(about 3 bytes a token, rounded up)", "WARN")
+            return estimate_tokens(text)
+>       n = len(data.get("tokens", []))
+                ^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'get'
+
+forge.py:466: AttributeError
+____________ test_bad_tokenizer_reply_is_not_zero_tokens[response2] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e83e0>
+response = {'tokens': '123'}
+
+    @pytest.mark.parametrize("response", [{}, [], {"tokens": "123"}, {"tokens": None}])
+    def test_bad_tokenizer_reply_is_not_zero_tokens(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused"})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+>       with pytest.raises(forge.ForgeError, match="token"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'forge.ForgeError'>
+
+tests/test_package_review.py:55: Failed
+____________ test_bad_tokenizer_reply_is_not_zero_tokens[response3] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622ebfb0>
+response = {'tokens': None}
+
+    @pytest.mark.parametrize("response", [{}, [], {"tokens": "123"}, {"tokens": None}])
+    def test_bad_tokenizer_reply_is_not_zero_tokens(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused"})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+        with pytest.raises(forge.ForgeError, match="token"):
+>           llm.tokens("a large prompt")
+
+tests/test_package_review.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <forge.LLM object at 0x7fb6622ebf20>, text = 'a large prompt'
+
+    def tokens(self, text: str) -> int:
+        """Exact count from the server's own tokenizer - or, for a server
+        without /tokenize (Strata), a generous estimate."""
+        if self.tok_delegate is not None and self.tok_delegate.model == self.model:
+            return self.tok_delegate.tokens(text)   # same model elsewhere: one tokenizer
+        if getattr(self, "no_tokenize", False):
+            return estimate_tokens(text)
+        key = hashlib.sha256((self.model + "\0" + text).encode("utf-8", "surrogatepass")).hexdigest()
+        with self._toklock:
+            if key in self._tokcache:
+                self._tokcache.move_to_end(key)
+                return self._tokcache[key]
+        # "model" routes the call in llama-server's router mode; a
+        # single-model server ignores it.
+        try:
+            data = self._post_retrying("/tokenize", {"content": text, "model": self.model},
+                                       timeout=60)
+        except ForgeError as exc:
+            if not re.search(r"HTTP (404|405|501)", str(exc)):
+                raise
+            # No tokenizer endpoint: count by estimate from now on.
+            self.no_tokenize = True
+            log(f"{self.name}: no /tokenize on this server - estimating prompt sizes "
+                f"(about 3 bytes a token, rounded up)", "WARN")
+            return estimate_tokens(text)
+>       n = len(data.get("tokens", []))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: object of type 'NoneType' has no len()
+
+forge.py:466: TypeError
+______________ test_bad_chat_reply_is_a_pipeline_error[response0] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb662025340>
+response = []
+
+    @pytest.mark.parametrize("response", [[], {"choices": "bad"}, {"choices": [None]},
+                                          {"choices": [{"message": {"content": ["bad"]}}]}])
+    def test_bad_chat_reply_is_a_pipeline_error(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused", "tokenize": False})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+        with pytest.raises(forge.ForgeError):
+>           llm.chat("system", "user")
+
+tests/test_package_review.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+forge.py:499: in chat
+    return self._chat(system, user, thinking, max_tokens, temperature, cancel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <forge.LLM object at 0x7fb662024f80>, system = 'system', user = 'user'
+thinking = False, max_tokens = None, temperature = None, cancel = None
+
+    def _chat(self, system: str, user: str, thinking=False,
+              max_tokens: int | None = None, temperature: float | None = None,
+              cancel: threading.Event | None = None) -> str:
+        want = max_tokens or (self.thinking_max_tokens if thinking else self.max_tokens)
+        # Never ask for more than the window has left: the planner's review
+        # cap defaulted to 240000 against a 230000 context.
+        room = self.context - self.tokens(system) - self.tokens(user) - self.TEMPLATE_MARGIN
+        if room < min(want, 1024):
+            raise BudgetExceeded(f"{self.name}: the prompt leaves {room} of {self.context} "
+                                 f"context tokens for the answer")
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}],
+            "max_tokens": min(want, room),
+            "temperature": (temperature if temperature is not None else
+                            self.thinking_temperature if thinking else self.temperature),
+            "chat_template_kwargs": self.template_kwargs(thinking),
+        }
+        if self.effort_top_level and self.kind == "qwen38":
+            body["reasoning_effort"] = self.effort(thinking)
+        if thinking:
+            body["top_p"] = self.thinking_top_p
+            body["top_k"] = self.thinking_top_k
+        extra = {"cancel": cancel} if cancel is not None else {}
+        data = self._post_retrying("/v1/chat/completions", body, timeout=3600, **extra)
+>       choice = (data.get("choices") or [{}])[0]
+                  ^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'get'
+
+forge.py:529: AttributeError
+______________ test_bad_chat_reply_is_a_pipeline_error[response1] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e8110>
+response = {'choices': 'bad'}
+
+    @pytest.mark.parametrize("response", [[], {"choices": "bad"}, {"choices": [None]},
+                                          {"choices": [{"message": {"content": ["bad"]}}]}])
+    def test_bad_chat_reply_is_a_pipeline_error(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused", "tokenize": False})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+        with pytest.raises(forge.ForgeError):
+>           llm.chat("system", "user")
+
+tests/test_package_review.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+forge.py:499: in chat
+    return self._chat(system, user, thinking, max_tokens, temperature, cancel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <forge.LLM object at 0x7fb6622eb2c0>, system = 'system', user = 'user'
+thinking = False, max_tokens = None, temperature = None, cancel = None
+
+    def _chat(self, system: str, user: str, thinking=False,
+              max_tokens: int | None = None, temperature: float | None = None,
+              cancel: threading.Event | None = None) -> str:
+        want = max_tokens or (self.thinking_max_tokens if thinking else self.max_tokens)
+        # Never ask for more than the window has left: the planner's review
+        # cap defaulted to 240000 against a 230000 context.
+        room = self.context - self.tokens(system) - self.tokens(user) - self.TEMPLATE_MARGIN
+        if room < min(want, 1024):
+            raise BudgetExceeded(f"{self.name}: the prompt leaves {room} of {self.context} "
+                                 f"context tokens for the answer")
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}],
+            "max_tokens": min(want, room),
+            "temperature": (temperature if temperature is not None else
+                            self.thinking_temperature if thinking else self.temperature),
+            "chat_template_kwargs": self.template_kwargs(thinking),
+        }
+        if self.effort_top_level and self.kind == "qwen38":
+            body["reasoning_effort"] = self.effort(thinking)
+        if thinking:
+            body["top_p"] = self.thinking_top_p
+            body["top_k"] = self.thinking_top_k
+        extra = {"cancel": cancel} if cancel is not None else {}
+        data = self._post_retrying("/v1/chat/completions", body, timeout=3600, **extra)
+        choice = (data.get("choices") or [{}])[0]
+>       msg = choice.get("message") or {}
+              ^^^^^^^^^^
+E       AttributeError: 'str' object has no attribute 'get'
+
+forge.py:530: AttributeError
+______________ test_bad_chat_reply_is_a_pipeline_error[response2] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e5670>
+response = {'choices': [None]}
+
+    @pytest.mark.parametrize("response", [[], {"choices": "bad"}, {"choices": [None]},
+                                          {"choices": [{"message": {"content": ["bad"]}}]}])
+    def test_bad_chat_reply_is_a_pipeline_error(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused", "tokenize": False})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+        with pytest.raises(forge.ForgeError):
+>           llm.chat("system", "user")
+
+tests/test_package_review.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+forge.py:499: in chat
+    return self._chat(system, user, thinking, max_tokens, temperature, cancel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <forge.LLM object at 0x7fb6622e6990>, system = 'system', user = 'user'
+thinking = False, max_tokens = None, temperature = None, cancel = None
+
+    def _chat(self, system: str, user: str, thinking=False,
+              max_tokens: int | None = None, temperature: float | None = None,
+              cancel: threading.Event | None = None) -> str:
+        want = max_tokens or (self.thinking_max_tokens if thinking else self.max_tokens)
+        # Never ask for more than the window has left: the planner's review
+        # cap defaulted to 240000 against a 230000 context.
+        room = self.context - self.tokens(system) - self.tokens(user) - self.TEMPLATE_MARGIN
+        if room < min(want, 1024):
+            raise BudgetExceeded(f"{self.name}: the prompt leaves {room} of {self.context} "
+                                 f"context tokens for the answer")
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}],
+            "max_tokens": min(want, room),
+            "temperature": (temperature if temperature is not None else
+                            self.thinking_temperature if thinking else self.temperature),
+            "chat_template_kwargs": self.template_kwargs(thinking),
+        }
+        if self.effort_top_level and self.kind == "qwen38":
+            body["reasoning_effort"] = self.effort(thinking)
+        if thinking:
+            body["top_p"] = self.thinking_top_p
+            body["top_k"] = self.thinking_top_k
+        extra = {"cancel": cancel} if cancel is not None else {}
+        data = self._post_retrying("/v1/chat/completions", body, timeout=3600, **extra)
+        choice = (data.get("choices") or [{}])[0]
+>       msg = choice.get("message") or {}
+              ^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'get'
+
+forge.py:530: AttributeError
+______________ test_bad_chat_reply_is_a_pipeline_error[response3] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6622e6450>
+response = {'choices': [{'message': {'content': ['bad']}}]}
+
+    @pytest.mark.parametrize("response", [[], {"choices": "bad"}, {"choices": [None]},
+                                          {"choices": [{"message": {"content": ["bad"]}}]}])
+    def test_bad_chat_reply_is_a_pipeline_error(monkeypatch, response):
+        llm = forge.LLM("bad-server", {"url": "http://unused", "tokenize": False})
+        monkeypatch.setattr(llm, "_post_retrying", lambda *a, **kw: response)
+        with pytest.raises(forge.ForgeError):
+>           llm.chat("system", "user")
+
+tests/test_package_review.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+forge.py:499: in chat
+    return self._chat(system, user, thinking, max_tokens, temperature, cancel)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <forge.LLM object at 0x7fb6622e6de0>, system = 'system', user = 'user'
+thinking = False, max_tokens = None, temperature = None, cancel = None
+
+    def _chat(self, system: str, user: str, thinking=False,
+              max_tokens: int | None = None, temperature: float | None = None,
+              cancel: threading.Event | None = None) -> str:
+        want = max_tokens or (self.thinking_max_tokens if thinking else self.max_tokens)
+        # Never ask for more than the window has left: the planner's review
+        # cap defaulted to 240000 against a 230000 context.
+        room = self.context - self.tokens(system) - self.tokens(user) - self.TEMPLATE_MARGIN
+        if room < min(want, 1024):
+            raise BudgetExceeded(f"{self.name}: the prompt leaves {room} of {self.context} "
+                                 f"context tokens for the answer")
+        body = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}],
+            "max_tokens": min(want, room),
+            "temperature": (temperature if temperature is not None else
+                            self.thinking_temperature if thinking else self.temperature),
+            "chat_template_kwargs": self.template_kwargs(thinking),
+        }
+        if self.effort_top_level and self.kind == "qwen38":
+            body["reasoning_effort"] = self.effort(thinking)
+        if thinking:
+            body["top_p"] = self.thinking_top_p
+            body["top_k"] = self.thinking_top_k
+        extra = {"cancel": cancel} if cancel is not None else {}
+        data = self._post_retrying("/v1/chat/completions", body, timeout=3600, **extra)
+        choice = (data.get("choices") or [{}])[0]
+        msg = choice.get("message") or {}
+        content = msg.get("content") or ""
+        reasoning = msg.get("reasoning_content") or ""
+        finish = choice.get("finish_reason")
+        usage = data.get("usage") or {}
+        # Kept so a caller can save what came back when a call fails.
+        self._local.last = {"finish_reason": finish, "content": content,
+                            "reasoning": reasoning,
+                            "completion_tokens": usage.get("completion_tokens")}
+        detail = (f"finish_reason={finish}, {usage.get('completion_tokens', '?')} "
+                  f"completion tokens, {len(reasoning)} chars of reasoning, "
+                  f"max_tokens={body['max_tokens']}, thinking={thinking!r}")
+        # A reasoning model that spends its whole budget thinking returns
+        # empty content with finish_reason=length. Both are truncation.
+        if finish == "length":
+            raise Truncated(f"{self.name}: hit max_tokens - output incomplete ({detail})")
+>       if not content.strip():
+               ^^^^^^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'strip'
+
+forge.py:546: AttributeError
+___________________ test_malformed_plan_is_diagnostic[plan0] ___________________
+
+plan = []
+
+    @pytest.mark.parametrize("plan", [[], None, {"chunks": {}}, {"chunks": "bad"}])
+    def test_malformed_plan_is_diagnostic(plan):
+>       assert forge.validate_plan(plan)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_package_review.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+plan = []
+
+    def validate_plan(plan: dict) -> list[str]:
+>       shape = chunk_shape_errors(plan.get("chunks") or [])
+                                   ^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'get'
+
+forge.py:1034: AttributeError
+___________________ test_malformed_plan_is_diagnostic[None] ____________________
+
+plan = None
+
+    @pytest.mark.parametrize("plan", [[], None, {"chunks": {}}, {"chunks": "bad"}])
+    def test_malformed_plan_is_diagnostic(plan):
+>       assert forge.validate_plan(plan)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_package_review.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+plan = None
+
+    def validate_plan(plan: dict) -> list[str]:
+>       shape = chunk_shape_errors(plan.get("chunks") or [])
+                                   ^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'get'
+
+forge.py:1034: AttributeError
+___________________ test_malformed_plan_is_diagnostic[plan2] ___________________
+
+plan = {'chunks': {}}
+
+    @pytest.mark.parametrize("plan", [[], None, {"chunks": {}}, {"chunks": "bad"}])
+    def test_malformed_plan_is_diagnostic(plan):
+>       assert forge.validate_plan(plan)
+E       AssertionError: assert []
+E        +  where [] = <function validate_plan at 0x7fb66226c9a0>({'chunks': {}})
+E        +    where <function validate_plan at 0x7fb66226c9a0> = forge.validate_plan
+
+tests/test_package_review.py:70: AssertionError
+_______________________ test_config_error_is_actionable ________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-4/test_config_error_is_actionabl0')
+capsys = <_pytest.capture.CaptureFixture object at 0x7fb662025b50>
+
+    def test_config_error_is_actionable(tmp_path, capsys):
+        missing = tmp_path / "missing.toml"
+>       assert forge.main(["--config", str(missing), "check"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_package_review.py:75: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+forge.py:16954: in main
+    cfg = load_config(args.config)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-agent/pytest-4/test_config_error_is_actionabl0/missing.toml')
+
+    def load_config(path: Path) -> dict:
+        if not path.exists():
+>           raise ForgeError(f"Config not found: {path}")
+E           forge.ForgeError: Config not found: /tmp/pytest-of-agent/pytest-4/test_config_error_is_actionabl0/missing.toml
+
+forge.py:180: ForgeError
+_____________________ test_log_reattach_closes_old_handle ______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-4/test_log_reattach_closes_old_h0')
+
+    def test_log_reattach_closes_old_handle(tmp_path):
+        log = forge.Log()
+        log.attach(tmp_path / "first.log")
+        old = log.fh
+        try:
+            log.attach(tmp_path / "second.log")
+>           assert old.closed
+E           AssertionError: assert False
+E            +  where False = <_io.TextIOWrapper name='/tmp/pytest-of-agent/pytest-4/test_log_reattach_closes_old_h0/first.log' mode='a' encoding='utf-8'>.closed
+
+tests/test_package_review.py:95: AssertionError
+___________________ test_failed_model_load_restores_services ___________________
+
+mod = <module 'forge_shape_server' from '/workspace/Forge/forge-shape-server.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6616ab5f0>
+
+    def test_failed_model_load_restores_services(mod, monkeypatch):
+        def fail():
+            mod.STATE["stopped"].append("sd-server")
+            raise RuntimeError("still no VRAM")
+        monkeypatch.setattr(mod, "make_room", fail)
+        calls = []
+        monkeypatch.setattr(mod, "systemctl", lambda *a: calls.append(a) or 0)
+        with pytest.raises(RuntimeError, match="no VRAM"):
+            mod.load()
+>       assert calls == [("start", "sd-server")]
+E       AssertionError: assert [] == [('start', 'sd-server')]
+E         
+E         Right contains one more item: ('start', 'sd-server')
+E         Use -v to get more diff
+
+tests/test_shape_server.py:123: AssertionError
+______________ test_failed_service_restart_is_retained_for_retry _______________
+
+mod = <module 'forge_shape_server' from '/workspace/Forge/forge-shape-server.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb661701cd0>
+
+    def test_failed_service_restart_is_retained_for_retry(mod, monkeypatch):
+        mod.STATE["stopped"] = ["sd-server"]
+        monkeypatch.setattr(mod, "systemctl", lambda *a: 1)
+>       assert mod.release() == []
+E       AssertionError: assert ['sd-server'] == []
+E         
+E         Left contains one more item: 'sd-server'
+E         Use -v to get more diff
+
+tests/test_shape_server.py:130: AssertionError
+----------------------------- Captured stdout call -----------------------------
+01:30:36 started sd-server again
+=========================== short test summary info ============================
+FAILED tests/test_package_review.py::test_plan_rejects_path_ids[../../escaped]
+FAILED tests/test_package_review.py::test_plan_rejects_path_ids[/tmp/escaped]
+FAILED tests/test_package_review.py::test_plan_rejects_path_ids[a/b] - Assert...
+FAILED tests/test_package_review.py::test_plan_rejects_path_ids[..] - Asserti...
+FAILED tests/test_package_review.py::test_plan_rejects_path_ids[x\n] - Assert...
+FAILED tests/test_package_review.py::test_verified_writer_rejects_escape - Fa...
+FAILED tests/test_package_review.py::test_commit_never_follows_base_project_symlink
+FAILED tests/test_package_review.py::test_bad_tokenizer_reply_is_not_zero_tokens[response0]
+FAILED tests/test_package_review.py::test_bad_tokenizer_reply_is_not_zero_tokens[response1]
+FAILED tests/test_package_review.py::test_bad_tokenizer_reply_is_not_zero_tokens[response2]
+FAILED tests/test_package_review.py::test_bad_tokenizer_reply_is_not_zero_tokens[response3]
+FAILED tests/test_package_review.py::test_bad_chat_reply_is_a_pipeline_error[response0]
+FAILED tests/test_package_review.py::test_bad_chat_reply_is_a_pipeline_error[response1]
+FAILED tests/test_package_review.py::test_bad_chat_reply_is_a_pipeline_error[response2]
+FAILED tests/test_package_review.py::test_bad_chat_reply_is_a_pipeline_error[response3]
+FAILED tests/test_package_review.py::test_malformed_plan_is_diagnostic[plan0]
+FAILED tests/test_package_review.py::test_malformed_plan_is_diagnostic[None]
+FAILED tests/test_package_review.py::test_malformed_plan_is_diagnostic[plan2]
+FAILED tests/test_package_review.py::test_config_error_is_actionable - forge....
+FAILED tests/test_package_review.py::test_log_reattach_closes_old_handle - As...
+FAILED tests/test_shape_server.py::test_failed_model_load_restores_services
+FAILED tests/test_shape_server.py::test_failed_service_restart_is_retained_for_retry
+22 failed, 11 passed, 1 deselected in 6.04s
