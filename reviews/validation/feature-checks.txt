@@ -1,0 +1,18 @@
+Runtime code commit: a4a5d1ea251c27184f51f9dba8376523f5446db7
+
+Command: python tools/check.py --lint
+
+Forge pytest: 612 passed, 7 skipped
+Forge unittest: 68 passed
+Services/dashboard pytest: 68 passed
+Total: 748 passed, 7 skipped
+Python error checks (Ruff E9,F63,F7,F82): passed
+All shipped shell scripts: bash -n passed
+
+Real-image smoke: all 9 additional targets and 4 profiles passed.
+Local: python-app, wasm, kotlin-jvm, hdl, cad, android, desktop; frontend and all database profiles.
+GitHub Linux runners: infra and ros2 (run 42258689662).
+Native Qt Linux, Windows, macOS: passed (run 42258689629).
+No signing or emulator validation claimed.
+
+Additional real checks: pinned-image replay, locked wheel fetch/install/pytest, bad hash rejection and stamp invalidation.

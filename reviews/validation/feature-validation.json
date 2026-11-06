@@ -1,0 +1,301 @@
+{
+  "schema_version": 1,
+  "runtime_code_commit": "a4a5d1ea251c27184f51f9dba8376523f5446db7",
+  "baseline_commit": "4b088d66978eba5063ae30bd702d7b322ab209db",
+  "cpu": {
+    "command": "python tools/check.py --lint",
+    "forge_pytest": {
+      "passed": 612,
+      "skipped": 7
+    },
+    "forge_unittest": {
+      "passed": 68
+    },
+    "services_dashboard_pytest": {
+      "passed": 68
+    },
+    "total_passed": 748,
+    "total_skipped": 7,
+    "python_error_lint": "passed",
+    "shell_syntax": "passed"
+  },
+  "local_real_image_validation": [
+    {
+      "name": "android",
+      "image": "forge-sandbox-android:latest",
+      "image_id": "sha256:dab361d6aebd83d49a9eaab19e901c6fc86187d1dc64b120126df55a7d76c5fe",
+      "versions": {
+        "python": "3.12.12",
+        "gradle": "8.14.3",
+        "kotlin": "2.2.21",
+        "jdk": "21.0.13+9",
+        "junit": "5.11.4",
+        "android_sdk": "19.0",
+        "api": "35",
+        "build_tools": "35.0.0",
+        "agp": "8.9.2"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:59:53.856796+00:00"
+      }
+    },
+    {
+      "name": "cad",
+      "image": "forge-sandbox-cad:latest",
+      "image_id": "sha256:169c1c0d96982f7d313219c8d04ffe0c17fc447f00ca31d66c2e6f60e560dac7",
+      "versions": {
+        "python": "3.12.12",
+        "numpy": "2.3.4",
+        "trimesh": "4.9.0",
+        "Pillow": "12.0.0",
+        "openscad": "2021.01-8"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:49:10.867321+00:00"
+      }
+    },
+    {
+      "name": "desktop",
+      "image": "forge-sandbox-desktop:latest",
+      "image_id": "sha256:5b6a7ff3cefb9b65f88e8cc68aa95c1afe5bd3b1fd985695620004654ec10281",
+      "versions": {
+        "python": "3.12.12",
+        "pytest": "8.4.2",
+        "mypy": "1.18.2",
+        "build": "1.3.0",
+        "uv": "0.9.4",
+        "fastapi": "0.120.1",
+        "flask": "3.1.2",
+        "django": "5.2.7",
+        "PySide6": "6.9.3",
+        "pyinstaller": "6.16.0",
+        "native_platform": "linux"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:53:39.630716+00:00"
+      }
+    },
+    {
+      "name": "go:database-service",
+      "image": "forge-sandbox-go-database:latest",
+      "image_id": "sha256:bd0f5acc0979f712505e217db2477120d5f2a3362de6f32bb96673bc826d4639",
+      "versions": {
+        "python": "3.12.12",
+        "pytest": "8.4.2",
+        "mypy": "1.18.2",
+        "build": "1.3.0",
+        "uv": "0.9.4",
+        "fastapi": "0.120.1",
+        "flask": "3.1.2",
+        "django": "5.2.7",
+        "go": "go version go1.24.7 linux/amd64",
+        "postgres": "postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:56:29.937594+00:00"
+      }
+    },
+    {
+      "name": "hdl",
+      "image": "forge-sandbox-hdl:latest",
+      "image_id": "sha256:25960ecd7bc7eb34e585ccecc0972b5e8d6fde2b621c9a74cc4bfd020bfe33d1",
+      "versions": {
+        "python": "3.12.12",
+        "iverilog": "12.0-2+b1",
+        "verilator": "5.032-1+b2",
+        "yosys": "0.52-2"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:48:44.671366+00:00"
+      }
+    },
+    {
+      "name": "kotlin-jvm",
+      "image": "forge-sandbox-kotlin-jvm:latest",
+      "image_id": "sha256:b477390172eb0c91ead047ceb464700431aa5e1e2e52fa8c29b150afc49361d3",
+      "versions": {
+        "python": "3.12.12",
+        "gradle": "8.14.3",
+        "kotlin": "2.2.21",
+        "jdk": "21.0.13+9",
+        "junit": "5.11.4"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T17:00:53.426187+00:00"
+      }
+    },
+    {
+      "name": "node:database-service",
+      "image": "forge-sandbox-node-database:latest",
+      "image_id": "sha256:d73fa9036da2a292de837bb295b591fe17bf69781ae460ed8582713c57e7cf2c",
+      "versions": {
+        "python": "3.12.12",
+        "pytest": "8.4.2",
+        "mypy": "1.18.2",
+        "build": "1.3.0",
+        "uv": "0.9.4",
+        "fastapi": "0.120.1",
+        "flask": "3.1.2",
+        "django": "5.2.7",
+        "node": "22.21.0",
+        "typescript": "5.9.3",
+        "vitest": "3.2.4",
+        "tsx": "4.20.6",
+        "jsdom": "26.1.0",
+        "vite": "7.1.12",
+        "react": "19.2.0",
+        "vue": "3.5.22",
+        "pg": "8.16.3",
+        "axe-core": "4.10.3",
+        "postgres": "postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:55:48.844392+00:00"
+      }
+    },
+    {
+      "name": "node:frontend",
+      "image": "forge-sandbox-ux:latest",
+      "image_id": "sha256:74dc91c2c3a4d031d4f3aa90a5828d3f2b77dc1cbad5e555cdf8cca7f0b7c446",
+      "versions": {
+        "python": "3.12.12",
+        "pytest": "8.4.2",
+        "mypy": "1.18.2",
+        "build": "1.3.0",
+        "uv": "0.9.4",
+        "fastapi": "0.120.1",
+        "flask": "3.1.2",
+        "django": "5.2.7",
+        "node": "22.21.0",
+        "typescript": "5.9.3",
+        "vitest": "3.2.4",
+        "tsx": "4.20.6",
+        "jsdom": "26.1.0",
+        "vite": "7.1.12",
+        "react": "19.2.0",
+        "vue": "3.5.22",
+        "@vitejs/plugin-vue": "6.0.1",
+        "@vitejs/plugin-react": "5.0.4",
+        "pg": "8.16.3",
+        "axe-core": "4.10.3"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T17:04:07.453278+00:00"
+      }
+    },
+    {
+      "name": "python-app",
+      "image": "forge-sandbox-python-app:latest",
+      "image_id": "sha256:1394282c001b37f702748214a85397e7bcc64e070386dc18ab568c92d8f4eb82",
+      "versions": {
+        "python": "3.12.12",
+        "pytest": "8.4.2",
+        "mypy": "1.18.2",
+        "build": "1.3.0",
+        "uv": "0.9.4",
+        "fastapi": "0.120.1",
+        "flask": "3.1.2",
+        "django": "5.2.7"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:48:24.490937+00:00"
+      }
+    },
+    {
+      "name": "python-app:database-service",
+      "image": "forge-sandbox-python-app-database:latest",
+      "image_id": "sha256:54a8f7432ba778abcdfdc95068a0b4be5e886a45c01bb17e47cad634b7720b1a",
+      "versions": {
+        "python": "3.12.12",
+        "pytest": "8.4.2",
+        "mypy": "1.18.2",
+        "build": "1.3.0",
+        "uv": "0.9.4",
+        "fastapi": "0.120.1",
+        "flask": "3.1.2",
+        "django": "5.2.7",
+        "postgres": "postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T16:55:19.797074+00:00"
+      }
+    },
+    {
+      "name": "wasm",
+      "image": "forge-sandbox-wasm:latest",
+      "image_id": "sha256:80336324be2286dc7276e6e0faa941b2b40d73cb11ebdfee601be9c351a7351b",
+      "versions": {
+        "python": "3.12.12",
+        "wasmtime": "38.0.0",
+        "rust": "1.90.0",
+        "clang": "19.1.7",
+        "wasi": "Preview 1"
+      },
+      "origin": "managed Linux Docker host",
+      "smoke": {
+        "status": "passed",
+        "validated_at": "2026-11-06T17:29:07.270475+00:00"
+      }
+    }
+  ],
+  "external_real_image_validation": [
+    {
+      "name": "infra",
+      "status": "passed",
+      "source_commit": "52db6bbe9789dc69caf924d4caf2146495d4745b",
+      "origin": "GitHub Actions Linux runner",
+      "run_url": "https://github.com/paultm214-wq/Forge/actions/runs/42258689662"
+    },
+    {
+      "name": "ros2",
+      "status": "passed",
+      "source_commit": "52db6bbe9789dc69caf924d4caf2146495d4745b",
+      "origin": "GitHub Actions Linux runner",
+      "run_url": "https://github.com/paultm214-wq/Forge/actions/runs/42258689662"
+    }
+  ],
+  "native_desktop_validation": {
+    "platforms": [
+      "Linux",
+      "Windows",
+      "macOS"
+    ],
+    "status": "passed",
+    "source_commit": "52db6bbe9789dc69caf924d4caf2146495d4745b",
+    "run_url": "https://github.com/paultm214-wq/Forge/actions/runs/42258689629",
+    "worker_sha256": "79bb4109d024fbe76dc40cf1f8369a68f55d516fa91616fe468f100c040cad37",
+    "signed": false
+  },
+  "additional_validation": {
+    "pinned_image_docker_replay": "passed: exact saved output hashes",
+    "locked_python_wheel_download": "passed",
+    "offline_python_wheel_install_and_pytest": "passed",
+    "bad_dependency_hash_and_stamp_invalidation": "passed"
+  },
+  "limits": [
+    "No signing identity or notarization configured",
+    "No Android emulator/device instrumentation",
+    "No live GPU/SSH fault injection",
+    "ROS/infra validated on external runners; local images require activation of saved egress additions"
+  ]
+}
