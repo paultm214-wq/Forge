@@ -573,3 +573,44 @@ def test_legacy_service_restore_is_dispatched_after_gpu_release(monkeypatch):
         wait=False,
     )
     assert events == ["release", "restore"]
+
+
+def test_profile_limit_overrides_preserve_docker_argument_types():
+    forge.set_toolchain("node", "frontend")
+    cfg = {
+        "profiles": {
+            "node:frontend": {"cpus": 0.5, "timeout": 42, "pids": 128, "tmpfs_mb": 256}
+        }
+    }
+    profile = forge.Sandbox(cfg).profile()
+    assert profile["cpus"] == "0.5"
+    assert (
+        profile["timeout"] == 42
+        and profile["pids"] == 128
+        and profile["tmpfs_mb"] == 256
+    )
+
+
+def test_oversized_png_header_remains_hash_only_without_decoding(tmp_path):
+    import struct
+    import zlib
+
+    def chunk(kind, payload):
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", zlib.crc32(kind + payload))
+        )
+
+    root = tmp_path / "run"
+    (root / "outputs").mkdir(parents=True)
+    path = root / "outputs/large.png"
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 50000, 50000, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(b""))
+        + chunk(b"IEND", b"")
+    )
+    record = provenance.artifacts(root)["outputs/large.png"]
+    assert record["sha256"] == provenance.digest(path) and "image" not in record

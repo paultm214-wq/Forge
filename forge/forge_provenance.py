@@ -49,7 +49,9 @@ def image_signature(path):
         return None
     try:
         from PIL import Image
-
+    except ImportError:
+        return None
+    try:
         with Image.open(path) as img:
             if img.width * img.height > 16_777_216:
                 return None
@@ -57,7 +59,7 @@ def image_signature(path):
                 size=list(img.size),
                 rgba32=list(img.convert("RGBA").resize((32, 32)).tobytes()),
             )
-    except (ImportError, OSError, ValueError):
+    except (Image.DecompressionBombError, OSError, ValueError):
         return None
 
 

@@ -83,6 +83,8 @@ SELFTEST_FILES = {
     "wasm": {
         "hello.c": '#include <stdio.h>\nint main(){puts("42");return 0;}\n',
         "hello.rs": 'fn main(){println!("42");}\n',
+        "exit_zero.rs": "fn main(){std::process::exit(0);}\n",
+        "exit_error.rs": "fn main(){std::process::exit(7);}\n",
         "denied.c": '#include <stdio.h>\nint main(){FILE *f=fopen("/etc/passwd","r");if(f){fclose(f);return 1;}puts("denied");return 0;}\n',
         "trap.c": "int main(){__builtin_trap();}\n",
     },
@@ -159,6 +161,10 @@ else:raise AssertionError('missing wheel accepted')
 assert game.wasi_run('app.wasm').out.strip()=='42'
 assert game.wasi_rust('hello.rs','rust.wasm').ok
 assert game.wasi_run('rust.wasm').out.strip()=='42'
+assert game.wasi_rust('exit_zero.rs','exit_zero.wasm').ok
+assert game.wasi_run('exit_zero.wasm').ok
+assert game.wasi_rust('exit_error.rs','exit_error.wasm').ok
+assert game.wasi_run('exit_error.wasm').returncode==7
 assert game.wasi_build('denied.c','denied.wasm').ok
 assert game.wasi_run('denied.wasm').out.strip()=='denied'
 assert game.wasi_build('trap.c','trap.wasm').ok
@@ -364,6 +370,9 @@ def install(g):
                 pids=256,
             )
             result.update(getattr(sandbox, "named_profiles", {}).get(key, {}))
+            result["cpus"] = str(result.get("cpus", sandbox.cpus))
+            for field in ("timeout", "tmpfs_mb", "pids"):
+                result[field] = int(result[field])
         return result
 
     original_init = g["Sandbox"].__init__

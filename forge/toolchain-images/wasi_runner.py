@@ -22,4 +22,7 @@ linker = wasmtime.Linker(engine)
 linker.define_wasi()
 module = wasmtime.Module.from_file(engine, path)
 instance = linker.instantiate(store, module)
-instance.exports(store)["_start"](store)
+try:
+    instance.exports(store)["_start"](store)
+except wasmtime.ExitTrap as exit_status:
+    raise SystemExit(exit_status.code)
