@@ -4789,6 +4789,8 @@ def package(toolchain: str, out) -> list[str]:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     made: list[str] = []
+    if toolchain in ("python-app","wasm","kotlin-jvm","android","ros2","desktop","hdl","cad","infra"):
+        return _extra_helpers["extra_package"](toolchain,out)
     proj = project_dir()
     if toolchain == "fo4":
         if list(proj.rglob("*.psc")):
@@ -5007,3 +5009,7 @@ def keep(path, name: str) -> Path | None:
 
 if __name__ == "__main__":
     sys.exit(_cli(sys.argv[1:]))
+
+from forge_extra_helpers import install as _install_extra_helpers
+_extra_helpers = _install_extra_helpers(globals())
+globals().update(_extra_helpers)

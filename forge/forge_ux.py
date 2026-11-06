@@ -167,7 +167,7 @@ def main(argv: list[str]) -> int:
     seen, pages, errors = set(), [], []
     host = urllib.parse.urlsplit(base).netloc
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(chromium_sandbox=False, args=["--disable-dev-shm-usage"])
+        browser = pw.chromium.launch(executable_path=os.environ.get("FORGE_CHROMIUM"), chromium_sandbox=False, args=["--disable-dev-shm-usage"])
         try:
             ctx = {k: browser.new_context(viewport={"width": w, "height": h}, reduced_motion="reduce")
                    for k, (w, h) in VIEWPORTS.items()}

@@ -117,6 +117,12 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import forge_control
+
+TOOLCHAIN_PROFILE = ""
+
 DEFAULT_CONFIG = Path("~/forge/config.toml").expanduser()
 
 
@@ -126,6 +132,16 @@ DEFAULT_CONFIG = Path("~/forge/config.toml").expanduser()
 
 class ForgeError(Exception):
     """A failure the run should stop on and report."""
+
+
+class CheckpointStop(ForgeError):
+    """Operator requested a cooperative stop after in-flight work finishes."""
+
+
+def checkpoint(run):
+    action = forge_control.requested(run.root)
+    if action in ("pause", "cancel"):
+        raise CheckpointStop(action)
 
 
 class Truncated(ForgeError):
@@ -857,7 +873,9 @@ class Sandbox:
         game_mounts = toolchain_mounts(TOOLCHAIN) if files_mode() and not self.unsafe_local else []
         if files_mode():
             files.setdefault("forge_game.py", forge_game_source())
-            if TOOLCHAIN == "rust" and "module.py" in files and not self.unsafe_local:
+            files.setdefault("forge_extra_helpers.py", (Path(__file__).parent / "forge_extra_helpers.py").read_text())
+            files.setdefault("forge_ux.py", (Path(__file__).parent / "forge_ux.py").read_text())
+            if TOOLCHAIN in ("rust", "wasm") and "module.py" in files and not self.unsafe_local:
                 ensure_cargo_deps(files["module.py"], self)
             elif TOOLCHAIN in DEPS_TOOLCHAINS and "module.py" in files and not self.unsafe_local:
                 ensure_deps(TOOLCHAIN, files["module.py"], self)
@@ -7872,6 +7890,8 @@ def commit(run: Run, cfg: dict, report: str) -> str:
         shutil.copy(run.root / "module.py", dest / f"{slug.replace('-', '_')}.py")
         shutil.copy(run.root / "SPEC.md", dest / "SPEC.md")
         shutil.copy(run.root / "plan.json", dest / "plan.json")
+        if (run.root / "BUILD_PROVENANCE.json").is_file():
+            shutil.copy(run.root / "BUILD_PROVENANCE.json", dest / "BUILD_PROVENANCE.json")
         (dest / "REPORT.md").write_text(report)
         if (run.root / "CHANGE.md").exists():
             changes = dest / "changes"
@@ -7886,6 +7906,8 @@ def commit(run: Run, cfg: dict, report: str) -> str:
         if files_mode():
             # The tests need the helper they ran with.
             (tests / "forge_game.py").write_text(forge_game_source())
+            shutil.copy(Path(__file__).parent / "forge_extra_helpers.py", tests / "forge_extra_helpers.py")
+            shutil.copy(Path(__file__).parent / "forge_ux.py", tests / "forge_ux.py")
         vendor = run.root / "vendor"
         if (vendor / "THIRD_PARTY.md").exists() and not files_mode():
             # Vendored Python packages (files-mode projects carry theirs in
@@ -9888,6 +9910,15 @@ def build_code_chunks(run: Run, cfg: dict, planner: LLM, coder: LLM, sandbox: Sa
                 _BUILDING.discard(c["id"])
 
     while True:
+        action = forge_control.requested(run.root)
+        if action in ('pause', 'cancel'):
+            if not running:
+                checkpoint(run)
+            cid, exc = finished.get()
+            running.pop(cid, None)
+            if exc is not None:
+                errors.append(exc)
+            continue
         if not running:
             infer_dependencies(run)           # rewrites plan.json: never under a running chunk
         plan = run.plan                       # a rebuild or an audit rewrites specs and tests
@@ -10007,7 +10038,7 @@ def _execute(run: Run, cfg: dict) -> str | None:
     global PRIOR_ART_TEXT, CACHE_ROOT, KIWIX_TEXT, RUN_SPEC_TEXT
     CACHE_ROOT = cache_dir(cfg)
     RUN_SPEC_TEXT = run.spec
-    set_toolchain(spec_toolchain(run.spec))
+    set_toolchain(spec_toolchain(run.spec), forge_targets.spec_profile(run.spec, spec_toolchain(run.spec)))
     if files_mode():
         log(f"toolchain: {TOOLCHAIN} ({TOOLCHAINS[TOOLCHAIN]['lang']}) - sandbox image "
             f"{sandbox.profile()['image']}")
@@ -14752,9 +14783,9 @@ PACKAGED = ("fo4", "blender", "minecraft", "go")
 def package_files(run: "Run", sandbox: "Sandbox", module: str, out: Path) -> None:
     raw = run.root / "outputs.build"
     shutil.rmtree(raw, ignore_errors=True)
-    script = ("import sys, forge_game as game\n"
-              f"made = game.package({TOOLCHAIN!r}, sys.argv[1] + '/build')\n"
-              "print('packaged:', ', '.join(made) or 'nothing')\n")
+    command = ("r=game.frontend_build(); assert r.ok,r.out\nmade=game.frontend_package(sys.argv[1]+'/build')\n"
+               if TOOLCHAIN_PROFILE == "frontend" else f"made=game.package({TOOLCHAIN!r},sys.argv[1]+'/build')\n")
+    script = "import sys,forge_game as game\n" + command + "print('packaged:', ', '.join(made) or 'nothing')\n"
     ok, msg = sandbox.run({"module.py": module, "package.py": script}, "package.py", ["OUT"],
                           out_dir=raw)
     if not ok:
@@ -14820,7 +14851,7 @@ def build_files_outputs(run: "Run", sandbox: "Sandbox", module: str) -> list[Pat
     if skipped_bin:
         log(f"package: ignored {len(skipped_bin)} image entr{'y' if len(skipped_bin) == 1 else 'ies'} "
             f"in FILES ({skipped_bin[0]}, ...) - images come from forge's renders", "WARN")
-    if TOOLCHAIN in PACKAGED:
+    if TOOLCHAIN in PACKAGED or TOOLCHAIN_PROFILE == "frontend":
         package_files(run, sandbox, module, out)
     caps = spec_captures(run.spec)
     if caps:
@@ -17553,6 +17584,13 @@ def main(argv=None) -> int:
         return 1
     return 0
 
+
+import forge_targets
+forge_targets.install(globals())
+import forge_operations
+import forge_recovery
+forge_operations.install(globals())
+forge_recovery.install(globals())
 
 if __name__ == "__main__":
     sys.exit(main())
