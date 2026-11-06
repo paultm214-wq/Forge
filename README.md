@@ -119,3 +119,31 @@ Behaviour changes (see `forge/CHANGES.md` for the full list):
   with a trailing newline are now rejected.
 
 New, additive: `forge status RUN [--json]` and `[claude] max_cost_usd`.
+
+## Follow-up update review
+
+- The output watchdog also checks completed processes: a writer that finishes
+  between polling intervals can no longer return success over the limit. The
+  watchdog is a best-effort check, not a filesystem quota; it cannot prevent a
+  burst of writes between polls.
+- `forge pending` skips a duplicate commit only when code **and deliverables**
+  match. Changes to assets, outputs, spec/plan, vendored files, design or docs
+  trigger a new commit even with unchanged Python code. The additive state key
+  `deferred_content_hash` records this fingerprint. An older deferred run without
+  that key may create one additional commit to establish its baseline; no manual
+  state migration is required.
+- `forge status --json` returns an error object and exit 1 when state.json or
+  plan.json contains a non-object JSON document, instead of a Python traceback.
+
+See [the update review](UPDATE-REVIEW.md) and
+[feature/toolchain proposals](docs/FEATURES_AND_TOOLCHAINS.md) for evidence and
+ranked recommendations. The Claude cost setting checks accumulated reported
+review cost before another call; a final call can exceed the threshold.
+
+## Download
+
+[Reviewed source archive](downloads/forge-reviewed.tar.gz?raw=true) ·
+[SHA-256 checksum](downloads/forge-reviewed.tar.gz.sha256?raw=true)
+
+The archive includes source, tests, reviews and validation evidence. Verify it
+with `sha256sum -c forge-reviewed.tar.gz.sha256` after downloading both files.

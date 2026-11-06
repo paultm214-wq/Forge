@@ -1,0 +1,86 @@
+
+[forge] /workspace/forge-review-venv/bin/python -m pytest -q tests
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+.................................................ss.s................... [ 38%]
+................s...............................s....................... [ 50%]
+........................................................................ [ 63%]
+........................................................................ [ 76%]
+........................................................................ [ 89%]
+..................................................s......s...            [100%]
+558 passed, 7 skipped in 74.00s (0:01:13)
+
+[forge] /workspace/forge-review-venv/bin/python -m unittest discover -s tests_unittest
+...../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/unittest/case.py:589: ResourceWarning: unclosed <socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 36379)>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+...............................................................
+----------------------------------------------------------------------
+Ran 68 tests in 12.299s
+
+OK
+
+[.] /workspace/forge-review-venv/bin/python -m pytest -q coder-models lab-dashboard
+..................................................................       [100%]
+66 passed in 25.88s
+
+[.] /workspace/forge-review-venv/bin/python -m ruff check --select E9,F63,F7,F82 .
+All checks passed!
+
+[.] bash -n /workspace/forge-incoming/Forge/coder-models/install-coder-models.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/collect-crash-logs.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/fo4-probe.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/fo4-probe2.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/fo4-probe3.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/fo4-probe4.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/fo4-probe5.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/gmod-probe.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/install-forge-toolchains.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/sbox-probe.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/sbox-probe2.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/forge/sbox-probe3.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-apollo-coder.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-apollo-imagegen.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-apollo-images.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-coder-helper.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-gemini-llm.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-llm-server.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-mercury-imagegen.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-rgb-monitor.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-vulcan-gaming.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-vulcan-imagegen.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-vulcan-shape.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/install-vulcan-strata.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/lab-dashboard/install-lab-dashboard.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/metis/forgejo-link.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/metis/forgejo-setup.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/metis/metis-link.sh
+
+[.] bash -n /workspace/forge-incoming/Forge/metis/metis-setup.sh

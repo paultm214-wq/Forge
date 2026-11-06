@@ -1,0 +1,552 @@
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+________________ test_output_watch_checks_fast_process_exit[0] _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_output_watch_checks_fast_0')
+exit_code = 0
+
+    @pytest.mark.parametrize("exit_code", [0, 3])
+    def test_output_watch_checks_fast_process_exit(tmp_path, exit_code):
+        sandbox = forge.Sandbox({"unsafe_local_exec": True, "timeout": 10, "out_watch_mb": 1})
+        out = tmp_path / "out"
+        code = ("import pathlib, sys\n"
+                "pathlib.Path(sys.argv[1], 'large.bin').write_bytes(b'x' * (2 * 2**20))\n"
+                f"sys.exit({exit_code})\n")
+        ok, diagnostic = sandbox.run({"writer.py": code}, "writer.py", ["OUT"], out_dir=out)
+>       assert not ok and "OUTPUT LIMIT" in diagnostic
+E       assert (not True)
+
+tests/test_update_review.py:19: AssertionError
+________________ test_output_watch_checks_fast_process_exit[3] _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_output_watch_checks_fast_1')
+exit_code = 3
+
+    @pytest.mark.parametrize("exit_code", [0, 3])
+    def test_output_watch_checks_fast_process_exit(tmp_path, exit_code):
+        sandbox = forge.Sandbox({"unsafe_local_exec": True, "timeout": 10, "out_watch_mb": 1})
+        out = tmp_path / "out"
+        code = ("import pathlib, sys\n"
+                "pathlib.Path(sys.argv[1], 'large.bin').write_bytes(b'x' * (2 * 2**20))\n"
+                f"sys.exit({exit_code})\n")
+        ok, diagnostic = sandbox.run({"writer.py": code}, "writer.py", ["OUT"], out_dir=out)
+>       assert not ok and "OUTPUT LIMIT" in diagnostic
+E       AssertionError: assert (not False and 'OUTPUT LIMIT' in '')
+
+tests/test_update_review.py:19: AssertionError
+________ test_status_rejects_nonobject_run_documents[value0-state.json] ________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_0')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617f1fbaa0>
+file = 'state.json', value = []
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_0')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+        chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+>       cstate = state.get("chunks") if isinstance(state.get("chunks"), dict) else {}
+                                                   ^^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'get'
+
+forge.py:17242: AttributeError
+________ test_status_rejects_nonobject_run_documents[value0-plan.json] _________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_1')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617f1fd400>
+file = 'plan.json', value = []
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_1')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+>       chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+                                                  ^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'get'
+
+forge.py:17241: AttributeError
+_________ test_status_rejects_nonobject_run_documents[None-state.json] _________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_2')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617f203170>
+file = 'state.json', value = None
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_2')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+        chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+>       cstate = state.get("chunks") if isinstance(state.get("chunks"), dict) else {}
+                                                   ^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'get'
+
+forge.py:17242: AttributeError
+_________ test_status_rejects_nonobject_run_documents[None-plan.json] __________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_3')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617f201af0>
+file = 'plan.json', value = None
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_3')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+>       chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+                                                  ^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'get'
+
+forge.py:17241: AttributeError
+__________ test_status_rejects_nonobject_run_documents[1-state.json] ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_4')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617ef31790>
+file = 'state.json', value = 1
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_4')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+        chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+>       cstate = state.get("chunks") if isinstance(state.get("chunks"), dict) else {}
+                                                   ^^^^^^^^^
+E       AttributeError: 'int' object has no attribute 'get'
+
+forge.py:17242: AttributeError
+___________ test_status_rejects_nonobject_run_documents[1-plan.json] ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_5')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617ef36a80>
+file = 'plan.json', value = 1
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_5')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+>       chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+                                                  ^^^^^^^^
+E       AttributeError: 'int' object has no attribute 'get'
+
+forge.py:17241: AttributeError
+_______ test_status_rejects_nonobject_run_documents[invalid-state.json] ________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_6')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617ef37d70>
+file = 'state.json', value = 'invalid'
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_6')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+        chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+>       cstate = state.get("chunks") if isinstance(state.get("chunks"), dict) else {}
+                                                   ^^^^^^^^^
+E       AttributeError: 'str' object has no attribute 'get'
+
+forge.py:17242: AttributeError
+________ test_status_rejects_nonobject_run_documents[invalid-plan.json] ________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_7')
+capsys = <_pytest.capture.CaptureFixture object at 0x7f617ef35a60>
+file = 'plan.json', value = 'invalid'
+
+    @pytest.mark.parametrize("file", ["state.json", "plan.json"])
+    @pytest.mark.parametrize("value", [[], None, 1, "invalid"])
+    def test_status_rejects_nonobject_run_documents(tmp_path, capsys, file, value):
+        (tmp_path / "state.json").write_text(json.dumps({"chunks": {}}))
+        (tmp_path / "plan.json").write_text(json.dumps({"chunks": []}))
+        (tmp_path / file).write_text(json.dumps(value))
+>       assert forge.main(["status", str(tmp_path), "--json"]) == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_update_review.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+forge.py:17398: in main
+    info = run_status(args.run_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = PosixPath('/tmp/pytest-of-agent/pytest-13/test_status_rejects_nonobject_7')
+
+    def run_status(root: Path) -> dict:
+        """A run as `forge status` shows it, read from its files alone: no
+        config, no servers, nothing written (the plan is read as JSON, not
+        through Run.plan, which sets the toolchain for a build)."""
+        root = Path(root).expanduser().resolve()
+        try:
+            state = json.loads((root / "state.json").read_text())
+        except FileNotFoundError:
+            raise ForgeError(f"{root} is not a forge run (no state.json)") from None
+        except (OSError, ValueError) as exc:
+            raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+        try:
+            plan = json.loads((root / "plan.json").read_text())
+        except (OSError, ValueError):
+            plan = {}
+>       chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
+                                                  ^^^^^^^^
+E       AttributeError: 'str' object has no attribute 'get'
+
+forge.py:17241: AttributeError
+_ test_pending_commits_changed_deliverables_even_if_code_is_identical[assets] __
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_pending_commits_changed_d0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f617f202120>
+claude = <function claude.<locals>.use at 0x7f617c480720>, tree = 'assets'
+
+    @pytest.mark.parametrize("tree", ["assets", "outputs"])
+    def test_pending_commits_changed_deliverables_even_if_code_is_identical(tmp_path, monkeypatch,
+                                                                           claude, tree):  # noqa: F811
+        server = boxer_server()
+        try:
+            claude("overloaded")
+            cfg, run = e2e(tmp_path, server)
+            if tree == "outputs":
+                # A build output changes between attempts, without changing the
+                # generated module (e.g. regenerated fixture or rendered result).
+                original = forge.build_outputs
+                payload = [b"original"]
+
+                def build_outputs(run, sandbox, module):
+                    original(run, sandbox, module)
+                    (run.root / "outputs").mkdir(exist_ok=True)
+                    (run.root / "outputs" / "result.bin").write_bytes(payload[0])
+
+                monkeypatch.setattr(forge, "build_outputs", build_outputs)
+                rel = "outputs/result.bin"
+            else:
+                rel = "assets/result.bin"
+                (run.root / rel).write_bytes(b"original")
+            first = forge.execute(run, cfg)
+            if tree == "outputs":
+                payload[0] = b"updated"
+            else:
+                (run.root / rel).write_bytes(b"updated")
+            assert forge.cmd_pending(cfg, run.root.parent, "run", run.root.name) == 0
+            state = forge.Run(run.root).state
+>           assert state["branch"] != first
+E           AssertionError: assert 'forge/boxer-20261106-041233-159dbf' != 'forge/boxer-20261106-041233-159dbf'
+
+tests/test_update_review.py:64: AssertionError
+----------------------------- Captured stdout call -----------------------------
+04:12:33 WARN  prior art: the planner gave no searches (planner: HTTP 500 on /v1/chat/completions: {"error": "no responder for 'You are the planner for a code-generation pipeline.\\nFind useful existing prior a'"}) - planning without
+04:12:33 INFO  planning
+04:12:33 INFO  plan: boxer - 2 chunks
+04:12:33 INFO  contract: writing the interface contract
+04:12:33 INFO  contract: 2 names
+04:12:33 INFO  [c1] attempt 1/6 (coder, direct)
+04:12:33 INFO  [c1] VERIFIED on attempt 1 (direct)
+04:12:33 INFO  [c2] attempt 1/6 (coder, direct)
+04:12:33 INFO  [c2] VERIFIED on attempt 1 (direct)
+04:12:33 WARN  regression (after the build): 1 chunk test(s) fail on the assembled module - finding what breaks them
+04:12:33 WARN    [c1] broken by c2: AssertionError: [1]
+04:12:33 INFO  [c2] fixing 1 regression finding(s)
+04:12:33 INFO  [c2] fix verified (no reproducing test - original test only)
+04:12:33 INFO  regression: repaired - all chunk tests pass again (after the build)
+04:12:33 INFO  regression: all chunk tests pass on the assembled module
+04:12:33 INFO  self-review round 1
+04:12:33 INFO  self review: approved
+04:12:33 INFO  Claude review round 1
+04:12:33 WARN  Claude review: API Error: 529 overloaded_error - retry 1/1 in 0s
+04:12:33 WARN  deferred to `forge pending`: Claude's code review (API Error: 529 overloaded_error)
+04:12:33 WARN  git: could not fetch /tmp/pytest-of-agent/pytest-13/test_pending_commits_changed_d0/forgejo.git/main - branching from the local main: fatal: couldn't find remote ref main
+04:12:33 INFO  committed to branch forge/boxer-20261106-041233-159dbf
+04:12:33 WARN  push held: Claude's review is deferred - `forge pending` reviews this run when the internet is back and commits the result to a new branch
+04:12:33 INFO  pending: the internet is back - Claude's code review for boxer-20261106-041233 (committed to forge/boxer-20261106-041233-159dbf)
+04:12:33 INFO  reopening the run (was committed to forge/boxer-20261106-041233-159dbf)
+04:12:33 INFO  already verified: c1, c2
+04:12:33 INFO  regression: all chunk tests pass on the assembled module
+04:12:33 INFO  self review already passed on an earlier run - continuing at Claude review
+04:12:33 INFO  Claude review round 1
+04:12:33 WARN  Claude review: API Error: 529 overloaded_error - retry 1/1 in 0s
+04:12:33 WARN  Claude is still unavailable (API Error: 529 overloaded_error) - this code is already committed on forge/boxer-20261106-041233-159dbf; nothing new to commit. `forge pending` tries again later
+04:12:33 INFO  pending: boxer-20261106-041233 still waits for Claude - next try in 30 min
+_ test_pending_commits_changed_deliverables_even_if_code_is_identical[outputs] _
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-13/test_pending_commits_changed_d1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f617ef3f530>
+claude = <function claude.<locals>.use at 0x7f617c480540>, tree = 'outputs'
+
+    @pytest.mark.parametrize("tree", ["assets", "outputs"])
+    def test_pending_commits_changed_deliverables_even_if_code_is_identical(tmp_path, monkeypatch,
+                                                                           claude, tree):  # noqa: F811
+        server = boxer_server()
+        try:
+            claude("overloaded")
+            cfg, run = e2e(tmp_path, server)
+            if tree == "outputs":
+                # A build output changes between attempts, without changing the
+                # generated module (e.g. regenerated fixture or rendered result).
+                original = forge.build_outputs
+                payload = [b"original"]
+
+                def build_outputs(run, sandbox, module):
+                    original(run, sandbox, module)
+                    (run.root / "outputs").mkdir(exist_ok=True)
+                    (run.root / "outputs" / "result.bin").write_bytes(payload[0])
+
+                monkeypatch.setattr(forge, "build_outputs", build_outputs)
+                rel = "outputs/result.bin"
+            else:
+                rel = "assets/result.bin"
+                (run.root / rel).write_bytes(b"original")
+            first = forge.execute(run, cfg)
+            if tree == "outputs":
+                payload[0] = b"updated"
+            else:
+                (run.root / rel).write_bytes(b"updated")
+            assert forge.cmd_pending(cfg, run.root.parent, "run", run.root.name) == 0
+            state = forge.Run(run.root).state
+>           assert state["branch"] != first
+E           AssertionError: assert 'forge/boxer-20261106-041234-506ec8' != 'forge/boxer-20261106-041234-506ec8'
+
+tests/test_update_review.py:64: AssertionError
+----------------------------- Captured stdout call -----------------------------
+04:12:34 WARN  prior art: the planner gave no searches (planner: HTTP 500 on /v1/chat/completions: {"error": "no responder for 'You are the planner for a code-generation pipeline.\\nFind useful existing prior a'"}) - planning without
+04:12:34 INFO  planning
+04:12:34 INFO  plan: boxer - 2 chunks
+04:12:34 INFO  contract: writing the interface contract
+04:12:34 INFO  contract: 2 names
+04:12:34 INFO  [c1] attempt 1/6 (coder, direct)
+04:12:34 INFO  [c1] VERIFIED on attempt 1 (direct)
+04:12:34 INFO  [c2] attempt 1/6 (coder, direct)
+04:12:34 INFO  [c2] VERIFIED on attempt 1 (direct)
+04:12:34 WARN  regression (after the build): 1 chunk test(s) fail on the assembled module - finding what breaks them
+04:12:34 WARN    [c1] broken by c2: AssertionError: [1]
+04:12:34 INFO  [c2] fixing 1 regression finding(s)
+04:12:34 INFO  [c2] fix verified (no reproducing test - original test only)
+04:12:34 INFO  regression: repaired - all chunk tests pass again (after the build)
+04:12:34 INFO  regression: all chunk tests pass on the assembled module
+04:12:34 INFO  self-review round 1
+04:12:34 INFO  self review: approved
+04:12:34 INFO  Claude review round 1
+04:12:34 WARN  Claude review: API Error: 529 overloaded_error - retry 1/1 in 0s
+04:12:34 WARN  deferred to `forge pending`: Claude's code review (API Error: 529 overloaded_error)
+04:12:34 WARN  git: could not fetch /tmp/pytest-of-agent/pytest-13/test_pending_commits_changed_d1/forgejo.git/main - branching from the local main: fatal: couldn't find remote ref main
+04:12:34 INFO  committed to branch forge/boxer-20261106-041234-506ec8
+04:12:34 WARN  push held: Claude's review is deferred - `forge pending` reviews this run when the internet is back and commits the result to a new branch
+04:12:34 INFO  pending: the internet is back - Claude's code review for boxer-20261106-041234 (committed to forge/boxer-20261106-041234-506ec8)
+04:12:34 INFO  reopening the run (was committed to forge/boxer-20261106-041234-506ec8)
+04:12:34 INFO  already verified: c1, c2
+04:12:34 INFO  regression: all chunk tests pass on the assembled module
+04:12:34 INFO  self review already passed on an earlier run - continuing at Claude review
+04:12:34 INFO  Claude review round 1
+04:12:34 WARN  Claude review: API Error: 529 overloaded_error - retry 1/1 in 0s
+04:12:34 WARN  Claude is still unavailable (API Error: 529 overloaded_error) - this code is already committed on forge/boxer-20261106-041234-506ec8; nothing new to commit. `forge pending` tries again later
+04:12:34 INFO  pending: boxer-20261106-041234 still waits for Claude - next try in 30 min
+=========================== short test summary info ============================
+FAILED tests/test_update_review.py::test_output_watch_checks_fast_process_exit[0]
+FAILED tests/test_update_review.py::test_output_watch_checks_fast_process_exit[3]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[value0-state.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[value0-plan.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[None-state.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[None-plan.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[1-state.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[1-plan.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[invalid-state.json]
+FAILED tests/test_update_review.py::test_status_rejects_nonobject_run_documents[invalid-plan.json]
+FAILED tests/test_update_review.py::test_pending_commits_changed_deliverables_even_if_code_is_identical[assets]
+FAILED tests/test_update_review.py::test_pending_commits_changed_deliverables_even_if_code_is_identical[outputs]
+12 failed in 5.36s

@@ -1,3 +1,15 @@
+# Follow-up review of the supplied update
+
+- The `/out` watchdog checks file size when the process exits as well as while
+  it runs. Fast successful or failed writers exceeding the limit are rejected
+  and their outputs cleared. This remains a polling watchdog, not a disk quota.
+- Deferred-commit deduplication includes assets, outputs, spec/plan, vendored
+  files, design and docs, not only module code. `deferred_content_hash` is an
+  additive state key; legacy deferred runs establish it on their next commit.
+- `forge status` reports non-object state/plan JSON through its normal error
+  response instead of raising AttributeError.
+- Regressions: `tests/test_update_review.py`.
+
 # 6 November: review hardening - verdicts, `forge pending`, /out, `forge status`
 
 From the 6 November code review. Tests: tests/test_review_hardening.py,

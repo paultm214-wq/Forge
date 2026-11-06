@@ -988,6 +988,10 @@ def _run_watched(cmd: list[str], cwd, env, timeout: float, watch: Path | None,
         while True:
             try:
                 out, err = p.communicate(timeout=min(poll, max(0.01, deadline - time.monotonic())))
+                # A short-lived writer can exceed the limit and exit before
+                # the first poll. Inspect completed processes as well.
+                if _dir_bytes(watch, limit) > limit:
+                    raise OutputOverflow(limit, (out or "") + (("\n" + err) if err else ""))
                 return subprocess.CompletedProcess(cmd, p.returncode, out, err)
             except subprocess.TimeoutExpired:
                 pass
@@ -8128,6 +8132,31 @@ def module_hash(module: str) -> str:
     return hashlib.sha256(module.encode()).hexdigest()[:16]
 
 
+def deliverable_hash(run: "Run", module: str) -> str:
+    """Fingerprint code and deliverables before skipping a deferred commit.
+
+    State/log/report files deliberately change on each attempt. Assets,
+    generated outputs, specs and packaged references can change independently
+    of the Python module and must not be mistaken for an identical result.
+    Read in blocks: outputs can be hundreds of MB.
+    """
+    digest = hashlib.sha256(module.encode())
+    for name in ("SPEC.md", "plan.json", "CHANGE.md", "assets", "outputs", "vendor", "design", "docs"):
+        source = run.root / name
+        paths = sorted(source.rglob("*")) if source.is_dir() and not source.is_symlink() else [source]
+        for path in paths:
+            if path.is_symlink():
+                raise ForgeError(f"symlink in deferred deliverables: {path.relative_to(run.root)}")
+            if not path.is_file():
+                continue
+            digest.update(json.dumps([path.relative_to(run.root).as_posix(), path.stat().st_size]).encode())
+            digest.update(b"\0")
+            with path.open("rb") as fh:
+                for block in iter(lambda: fh.read(1 << 20), b""):
+                    digest.update(block)
+    return digest.hexdigest()
+
+
 def defer(run: "Run", kind: str, reason: str) -> None:
     """Record work that waits for the internet: `forge pending` does it."""
     with run.edit() as st:
@@ -10209,10 +10238,11 @@ def _execute(run: Run, cfg: dict) -> str | None:
                         prior = run.state.get("deferred_from")
                         if (mode == "defer" and prior
                                 and (run.state.get("deferred") or {}).get("claude_review")
-                                and run.state.get("deferred_hash") == module_hash(module)):
+                                and run.state.get("deferred_hash") == module_hash(module)
+                                and run.state.get("deferred_content_hash") == deliverable_hash(run, module)):
                             # `forge pending` brought the run back, Claude is
                             # still unavailable, and exactly this code is
-                            # already committed on `prior`. Committing again
+                            # and deliverables already committed on `prior`. Committing again
                             # made a new identical branch on every timer tick.
                             with run.edit() as st:
                                 st["phase"], st["branch"] = "committed", prior
@@ -10334,8 +10364,10 @@ def _execute(run: Run, cfg: dict) -> str | None:
         # not commit this same code again while Claude stays unavailable.
         if (st.get("deferred") or {}).get("claude_review"):
             st["deferred_hash"] = module_hash(module)
+            st["deferred_content_hash"] = deliverable_hash(run, module)
         else:
             st.pop("deferred_hash", None)
+            st.pop("deferred_content_hash", None)
     log(f"committed to branch {branch}")
     if (run.state.get("deferred") or {}).get("claude_review"):
         log("push held: Claude's review is deferred - `forge pending` reviews this run when the "
@@ -17234,10 +17266,14 @@ def run_status(root: Path) -> dict:
         raise ForgeError(f"{root} is not a forge run (no state.json)") from None
     except (OSError, ValueError) as exc:
         raise ForgeError(f"cannot read {root / 'state.json'}: {exc}") from None
+    if not isinstance(state, dict):
+        raise ForgeError(f"{root / 'state.json'} must contain a JSON object")
     try:
         plan = json.loads((root / "plan.json").read_text())
     except (OSError, ValueError):
         plan = {}
+    if not isinstance(plan, dict):
+        raise ForgeError(f"{root / 'plan.json'} must contain a JSON object")
     chunks = plan.get("chunks") if isinstance(plan.get("chunks"), list) else []
     cstate = state.get("chunks") if isinstance(state.get("chunks"), dict) else {}
     by_status: dict[str, list[str]] = {}
