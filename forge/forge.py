@@ -875,9 +875,9 @@ class Sandbox:
             files.setdefault("forge_game.py", forge_game_source())
             files.setdefault("forge_extra_helpers.py", (Path(__file__).parent / "forge_extra_helpers.py").read_text())
             files.setdefault("forge_ux.py", (Path(__file__).parent / "forge_ux.py").read_text())
-            if TOOLCHAIN in ("rust", "wasm") and "module.py" in files and not self.unsafe_local:
+            if TOOLCHAIN in ("rust", "wasm") and "module.py" in files and not self.unsafe_local and not getattr(self, "replay", False):
                 ensure_cargo_deps(files["module.py"], self)
-            elif TOOLCHAIN in DEPS_TOOLCHAINS and "module.py" in files and not self.unsafe_local:
+            elif TOOLCHAIN in DEPS_TOOLCHAINS and "module.py" in files and not self.unsafe_local and not getattr(self, "replay", False):
                 ensure_deps(TOOLCHAIN, files["module.py"], self)
         try:
             for fname, content in files.items():
@@ -5745,7 +5745,7 @@ class ImagePool:
         while True:
             with self.cv:
                 while True:
-                    if self.no_new or name not in self.alive:
+                    if self.no_new or name not in self.alive or forge_control.requested(self.run.root) in ("pause", "cancel"):
                         self.cv.notify_all()
                         return
                     job = self._choose(srv) if self.queue else None
@@ -5843,7 +5843,7 @@ class ImagePool:
             while True:
                 with self.cv:
                     while True:
-                        if self.no_new:
+                        if self.no_new or forge_control.requested(self.run.root) in ("pause", "cancel"):
                             return
                         if self.shape_queue and not self._renders_on(machine) \
                                 and not self._batch_shapes(machine):

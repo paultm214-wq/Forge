@@ -8,6 +8,11 @@ and remote lab monitoring are integrated workflows.
 
 ## Develop and test without the lab
 
+The [runtime and toolchain guide](forge/FEATURES.md) covers provenance/replay,
+health reports, cooperative GPU controls, nine additional targets, and browser,
+database and native desktop recipes. Real validation results are recorded in
+[the feature implementation report](reviews/FEATURE_IMPLEMENTATION.md).
+
 Use Python 3.11+ (validated here on 3.12) and Bash. From the package root:
 
 ```sh

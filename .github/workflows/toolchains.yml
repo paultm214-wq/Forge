@@ -1,5 +1,10 @@
 name: Offline toolchain smoke tests
 on:
+  push:
+    paths:
+      - 'forge/toolchain-images/infra.Dockerfile'
+      - 'forge/toolchain-images/ros2.Dockerfile'
+      - '.github/workflows/toolchains.yml'
   workflow_dispatch:
     inputs:
       accept_android_sdk_license:
@@ -13,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [python-app, wasm, kotlin-jvm, hdl, cad, infra, android, ros2, desktop]
+        target: ${{ fromJSON(github.event_name == 'workflow_dispatch' && '["python-app","wasm","kotlin-jvm","hdl","cad","infra","ros2","desktop"]' || '["infra","ros2"]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +28,35 @@ jobs:
         with:
           python-version: '3.12'
       - name: Build and execute real offline smoke
-        if: matrix.target != 'android' || inputs.accept_android_sdk_license
         shell: bash
         env:
           TARGET: ${{ matrix.target }}
-          ANDROID_SDK_LICENSE_ACCEPTED: ${{ inputs.accept_android_sdk_license && 'yes' || 'no' }}
         run: |
-          bash forge/install-forge-extras.sh "$TARGET"
+          bash forge/install-forge-extras.sh "$TARGET" 2>&1 | tee build.log
           printf '' > /tmp/forge-smoke.toml
-          python forge/forge.py --config /tmp/forge-smoke.toml selftest "$TARGET"
+          python forge/forge.py --config /tmp/forge-smoke.toml selftest "$TARGET" 2>&1 | tee smoke.log
+      - name: Retain build and smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.target }}
+          path: |
+            build.log
+            smoke.log
+  android:
+    if: github.event_name == 'workflow_dispatch' && inputs.accept_android_sdk_license
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: SDK-license-approved Android smoke
+        env:
+          ANDROID_SDK_LICENSE_ACCEPTED: 'yes'
+        run: |
+          bash forge/install-forge-extras.sh android
+          printf '' > /tmp/forge-smoke.toml
+          python forge/forge.py --config /tmp/forge-smoke.toml selftest android

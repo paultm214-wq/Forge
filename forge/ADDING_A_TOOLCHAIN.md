@@ -1,5 +1,12 @@
 # Adding a toolchain to forge
 
+The additive targets in `forge_targets.py` use `toolchain-images/*.Dockerfile`
+and `install-forge-extras.sh`; their sandbox helpers live in
+`forge_extra_helpers.py`. See [FEATURES.md](FEATURES.md) for dependency locks,
+profiles, version manifests, and the validation boundary. Keep executable smoke
+fixtures and trusted image-prewarm templates synchronized. A registered target
+or passing CPU suite does not establish a real-image pass.
+
 A toolchain is everything forge needs to build and test one kind of
 project offline: a sandbox image, helpers the tests call, notes for the
 coders, and a self-test. This is the checklist the November toolchains
