@@ -1,0 +1,34 @@
+name: Offline toolchain smoke tests
+on:
+  workflow_dispatch:
+    inputs:
+      accept_android_sdk_license:
+        description: 'I accept https://developer.android.com/studio/terms for this CI run'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [python-app, wasm, kotlin-jvm, hdl, cad, infra, android, ros2, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and execute real offline smoke
+        if: matrix.target != 'android' || inputs.accept_android_sdk_license
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          ANDROID_SDK_LICENSE_ACCEPTED: ${{ inputs.accept_android_sdk_license && 'yes' || 'no' }}
+        run: |
+          bash forge/install-forge-extras.sh "$TARGET"
+          printf '' > /tmp/forge-smoke.toml
+          python forge/forge.py --config /tmp/forge-smoke.toml selftest "$TARGET"

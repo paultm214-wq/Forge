@@ -953,6 +953,11 @@ phase_forge() {
     [ -f "$FORGE_SRC" ] || die "forge.py not found at $FORGE_SRC"
     mkdir -p "$FORGE_DIR/inbox" "$FORGE_DIR/runs" "$HOME/.local/bin"
     install -m 0755 "$FORGE_SRC" "$FORGE_DIR/forge.py"
+    for extension in forge_control.py forge_health.py forge_provenance.py forge_operations.py forge_recovery.py forge_targets.py forge_dependencies.py forge_extra_helpers.py; do
+        install -m 0644 "$(dirname "$FORGE_SRC")/$extension" "$FORGE_DIR/$extension"
+    done
+    install -m 0755 "$(dirname "$FORGE_SRC")/install-forge-extras.sh" "$FORGE_DIR/install-forge-extras.sh"
+    cp -a "$(dirname "$FORGE_SRC")/toolchain-images" "$FORGE_DIR/"
     # forge_game.py: the `game` helper of game, emulator, mod and RE test
     # sandboxes - forge reads it from beside forge.py.
     if [ -f "$(dirname "$FORGE_SRC")/forge_game.py" ]; then

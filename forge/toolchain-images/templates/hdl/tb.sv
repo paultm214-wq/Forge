@@ -1,0 +1,1 @@
+module tb; reg clk=0;reg reset=1;wire [3:0] count;counter dut(clk,reset,count);always #5 clk=~clk;initial begin $dumpfile("counter.vcd");$dumpvars(0,tb);#6;if(count!==0)$fatal(1,"reset");reset=0;#10;if(count!==1)$fatal(1,"cycle");#150;if(count!==0)$fatal(1,"overflow");$display("42");$finish;end endmodule

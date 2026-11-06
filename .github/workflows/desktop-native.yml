@@ -1,0 +1,35 @@
+name: Native Qt desktop workers
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'forge/tools/desktop_worker.py'
+      - 'forge/toolchain-images/templates/desktop/**'
+      - '.github/workflows/desktop-native.yml'
+permissions:
+  contents: read
+jobs:
+  gui:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pytest==8.4.2 PySide6==6.9.3 pyinstaller==6.16.0 pyinstaller-hooks-contrib==2025.9
+      - name: Linux GUI dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libglib2.0-0
+      - name: Test and package the reviewed static GUI fixture
+        run: python forge/tools/desktop_worker.py build forge/toolchain-images/templates/desktop --output native-dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ runner.os }}
+          path: native-dist/
+          if-no-files-found: error

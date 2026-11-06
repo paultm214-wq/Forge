@@ -55,7 +55,8 @@
 set -euo pipefail
 
 ALL=(godot c-sdl rust lua-love dotnet java re sbox gmod fo4 blender minecraft shell node go
-     homeassistant c-cpp sql mcu esp32 devices raspberrypi ux)
+     homeassistant c-cpp sql mcu esp32 devices raspberrypi ux python-app wasm kotlin-jvm hdl cad infra android ros2 desktop
+     node:frontend python-app:database-service node:database-service go:database-service)
 SBOX_DIR="${SBOX_DIR:-$HOME/.steam/debian-installation/steamapps/common/sbox}"
 FO4_DIR="${FO4_DIR:-$HOME/.steam/debian-installation/steamapps/common/Fallout 4}"
 GAMES="${GAMES:-$HOME/forge/games}"
@@ -241,6 +242,11 @@ WORKDIR /work'
 [[ " ${BUILT[*]} " == *" base "* ]] || die "the base image did not build - see $LOGDIR/base.log"
 for t in "${WANT[@]}"; do
 case "$t" in
+python-app|wasm|kotlin-jvm|hdl|cad|infra|android|ros2|desktop)
+    if bash "$HERE/install-forge-extras.sh" "$t"; then BUILT+=("$t"); else FAILED+=("$t"); fi ;;
+node:frontend|python-app:database-service|node:database-service|go:database-service)
+    extra="${t%%:*}-database"; [[ "$t" != node:frontend ]] || extra=frontend
+    if bash "$HERE/install-forge-extras.sh" "$extra"; then BUILT+=("$t"); else FAILED+=("$t"); fi ;;
 godot)
     url=$(gh_asset godotengine/godot "${GODOT_VERSION:+${GODOT_VERSION}-stable}" '_linux\.x86_64\.zip$') || {
         warn "godot: could not find the release on GitHub (rate limit? set GITHUB_TOKEN)"

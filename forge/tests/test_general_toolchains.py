@@ -58,7 +58,7 @@ def test_every_new_toolchain_is_wired_everywhere():
         compile(forge.SELFTEST_SCRIPT % forge.SELFTEST_STEPS[t], t, "exec")
         assert f"\n{t})\n" in inst, t
     assert forge.LANG_ALIASES["golang"] == "go"
-    assert set(forge.DEPS_TOOLCHAINS) == {"node", "go", "homeassistant"}
+    assert set(forge.DEPS_TOOLCHAINS) == {"node", "go", "homeassistant", "python-app", "desktop", "ros2", "kotlin-jvm", "android"}
     assert "go" in forge.PACKAGED and "minecraft" in forge.PACKAGED
 
 

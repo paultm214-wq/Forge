@@ -35,6 +35,9 @@ import hmac
 import ipaddress
 import json
 import os
+import datetime as dt
+import platform
+import socket
 import shutil
 import struct
 import subprocess
@@ -133,8 +136,23 @@ class Hub:
         try:
             st = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
-            return {"present": False}
-        st["present"] = True
+            st = {"present": False}
+        else:
+            st["present"] = True
+        try:
+            health = json.loads(Path(os.path.expanduser(self.cfg.get("toolchain_health", "~/forge/toolchain-health.json"))).read_text())
+            age = time.time() - dt.datetime.fromisoformat(health["observed_at"]).timestamp()
+            host = {"hostname": socket.gethostname(), "architecture": platform.machine()}
+            health.update(age_seconds=max(0, age), stale=age > 86400 or health.get("host") != host)
+            for row in health.get("toolchains", []):
+                smoke = row.setdefault("smoke", {})
+                stamp = smoke.get("validated_at")
+                smoke["stale"] = not stamp or time.time() - dt.datetime.fromisoformat(stamp).timestamp() > 86400
+            st["toolchain_health"] = health
+        except (OSError, ValueError, TypeError, KeyError):
+            st["toolchain_health"] = {"toolchains": [], "stale": True}
+        if not st["present"]:
+            return st
         st["alive"] = bool(st.get("active")) and pid_alive(st.get("pid"))
         run_dir = Path(st.get("run_dir") or "")
         try:
@@ -306,6 +324,16 @@ class Hub:
         f = self.read_forge()
         if not f.get("present") or not f.get("run_dir"):
             return 400, {"ok": False, "message": "forge has no run yet"}
+        if action in ("pause", "cancel"):
+            if not f.get("alive"):
+                return 409, {"ok": False, "message": "forge has no active run"}
+            try:
+                result = subprocess.run(["python3", os.path.expanduser(self.cfg["forge"]), "control", f["run_dir"], action],
+                                        capture_output=True, text=True, timeout=10)
+                return (200 if result.returncode == 0 else 500), {"ok": result.returncode == 0,
+                    "message": f"{action} requested; current chunks finish before the checkpoint" if result.returncode == 0 else result.stdout[-1000:]}
+            except (OSError, subprocess.TimeoutExpired) as error:
+                return 500, {"ok": False, "message": str(error)}
         if f.get("alive"):
             return 409, {"ok": False, "message": f"{f.get('run')} is still running"}
         forge = os.path.expanduser(self.cfg["forge"])
@@ -828,7 +856,14 @@ function forgeCard(f,controls){const card=el("section","card wide");const top=el
   l.append(el("div","name","forge"),el("div","role",f.present?`${f.project||""} · ${f.run||""}`:"no run yet"));
   const r=el("div");const p=el("span","pill",f.alive?(f.run_phase||"running"):(f.phase||"not running"));
   p.style.background=css(f.alive?"--code":f.phase==="failed"?"--bad":f.phase==="committed"?"--ok":"--idle");r.append(p);
-  top.append(l,r);card.append(top);if(!f.present)return card;
+  top.append(l,r);card.append(top);
+  const health=f.toolchain_health||{};
+  if((health.toolchains||[]).length){const box=el("details");box.append(el("summary",null,"Toolchain health"+(health.stale?" (stale)":"")));
+    for(const t of health.toolchains)box.append(el("div","note",`${t.name}: ${t.status}; smoke ${(t.smoke||{}).status||"unrun"}${(t.smoke||{}).stale?" (stale)":""}`));card.append(box)}
+  if(!f.present)return card;
+  for(const [name,w] of Object.entries(f.gpu_waiting||{}))card.append(el("div","note",`${name}: ${w.reason}; ${(w.ahead||[]).length} claim(s) ahead`));
+  if(f.alive&&controls){const group=el("div","ctlgrid");for(const action of ["pause","cancel"])group.append(control(action==="pause"?"Pause after current chunks":"Cancel with checkpoint",
+    "Current work finishes and verified chunks remain available to resume.",false,()=>post("/api/forge",{action})));card.append(group)}
   const pr=el("div","row progress");if(f.chunks_total)pr.append(kv("chunks verified",`${f.chunks_done} / ${f.chunks_total}`));
   if(f.images_total)pr.append(kv("images",`${f.images_done} / ${f.images_total}`));
   if(f.chunks_failed&&f.chunks_failed.length)pr.append(kv("failed",f.chunks_failed.join(", "),"vhot"));

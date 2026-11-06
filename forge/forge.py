@@ -14550,7 +14550,8 @@ def _fetch_deps(plan: dict, deps: Path, sandbox: "Sandbox") -> None:
             p.write_text(text)
         for p in [src, *src.rglob("*")]:
             os.chmod(p, 0o755 if p.is_dir() else 0o644)
-        for old in ("node_modules", "gomod", "wheels", "go.mod", "go.sum"):
+        (deps / ".hash").unlink(missing_ok=True)
+        for old in ("node_modules", "gomod", "wheels", "jars", "requirements.lock", "go.mod", "go.sum"):
             t = deps / old
             if t.is_dir():
                 shutil.rmtree(t, ignore_errors=True)
@@ -14573,6 +14574,9 @@ def _fetch_deps(plan: dict, deps: Path, sandbox: "Sandbox") -> None:
                 "--read-only", "--tmpfs", "/tmp:rw,exec,size=2048m",
                 "-v", f"{src}:/work:ro", "-v", f"{deps}:/deps:rw", "-v", f"{cache}:/cache:rw",
                 "-e", "HOME=/tmp"]
+        ca_bundle = Path(os.environ.get("FORGE_CA_BUNDLE", "/etc/ssl/certs/ca-certificates.crt"))
+        if ca_bundle.is_file():
+            base += ["-v", f"{ca_bundle}:/run/forge-ca.pem:ro", "-e", "PIP_CERT=/run/forge-ca.pem", "-e", "SSL_CERT_FILE=/run/forge-ca.pem"]
         script = "rm -rf /tmp/m && cp -r /work /tmp/m && " + plan["script"]
         if plan.get("after"):
             script += " && (" + plan["after"] + ")"
@@ -14784,7 +14788,7 @@ def package_files(run: "Run", sandbox: "Sandbox", module: str, out: Path) -> Non
     raw = run.root / "outputs.build"
     shutil.rmtree(raw, ignore_errors=True)
     command = ("r=game.frontend_build(); assert r.ok,r.out\nmade=game.frontend_package(sys.argv[1]+'/build')\n"
-               if TOOLCHAIN_PROFILE == "frontend" else f"made=game.package({TOOLCHAIN!r},sys.argv[1]+'/build')\n")
+               if TOOLCHAIN_PROFILE == "frontend" else f"made = game.package({TOOLCHAIN!r}, sys.argv[1] + '/build')\n")
     script = "import sys,forge_game as game\n" + command + "print('packaged:', ', '.join(made) or 'nothing')\n"
     ok, msg = sandbox.run({"module.py": module, "package.py": script}, "package.py", ["OUT"],
                           out_dir=raw)
@@ -17587,6 +17591,8 @@ def main(argv=None) -> int:
 
 import forge_targets
 forge_targets.install(globals())
+import forge_dependencies
+forge_dependencies.install(globals())
 import forge_operations
 import forge_recovery
 forge_operations.install(globals())

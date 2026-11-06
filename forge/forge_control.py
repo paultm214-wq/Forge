@@ -24,6 +24,8 @@ def identity(pid=None):
     try:
         pid = os.getpid() if pid is None else int(pid)
         fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+        if fields[0] == 'Z':
+            return None
         return Path('/proc/sys/kernel/random/boot_id').read_text().strip() + ':' + fields[19]
     except (OSError, ValueError, IndexError):
         return None

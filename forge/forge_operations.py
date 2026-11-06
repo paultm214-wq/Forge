@@ -147,13 +147,19 @@ def install(g):
             with run.edit() as state:
                 state.update(phase=phase, checkpoint_at=health.now())
             if (run.root / 'plan.json').is_file():
-                ops.record(run, cfg, '', checkpoint_phase=phase)
+                try:
+                    ops.record(run, cfg, '', checkpoint_phase=phase)
+                except (OSError, ValueError, g['ForgeError']) as error:
+                    g['log']('checkpoint saved; provenance unavailable: '+str(error), 'WARN')
             g['STATUS'].set(active=False, phase=phase, error=None)
             return None
     g['execute'] = execute
     original_inner = g['_execute']
     def inner(run, cfg):
         ops.checkpoint(run)
+        recovery = g['recover_services'](cfg, True)
+        if recovery:
+            g['STATUS'].set(service_recovery=recovery)
         return original_inner(run, cfg)
     g['_execute'] = inner
     original_commit = g['commit']

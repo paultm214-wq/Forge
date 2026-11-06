@@ -1,0 +1,1 @@
+<package format="3"><name>forge_sensor</name><version>1.0.0</version><description>Recorded sensor fixture</description><maintainer email="forge@example.com">Forge</maintainer><license>MIT</license><buildtool_depend>ament_python</buildtool_depend><exec_depend>rclpy</exec_depend><exec_depend>std_msgs</exec_depend><export><build_type>ament_python</build_type></export></package>

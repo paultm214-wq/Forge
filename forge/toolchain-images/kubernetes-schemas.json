@@ -1,0 +1,116 @@
+{
+  "revision": "102361970337d65537d40141dc29b991b8e95786",
+  "kubernetes": "1.32.0",
+  "files": [
+    {
+      "name": "deployment.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/deployment.json",
+      "sha256": "11ea19383625796e2763cfa14f38b323bbf71351920194da983418ee631994b4"
+    },
+    {
+      "name": "pod.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/pod.json",
+      "sha256": "52b25f8b40caaf14f3194f8a1f9ac94bc979b4358da91322af5cae66a13d0b96"
+    },
+    {
+      "name": "service.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/service.json",
+      "sha256": "e831ca1c514e4e9798869639949694663deec8f3fd94b489e345aec5a309c13f"
+    },
+    {
+      "name": "configmap.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/configmap.json",
+      "sha256": "14bf6e296c189e0414464c734c384a53dd2e0aae12589b030340f6079e7473b4"
+    },
+    {
+      "name": "secret.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/secret.json",
+      "sha256": "65f5a6945bbe766eef8292e5aa45c7b62d98c275af45a51652d26b0426cc3c55"
+    },
+    {
+      "name": "namespace.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/namespace.json",
+      "sha256": "99301bb4ecb85094c9708ee076b5bdcc23465a1352dd0f1d9189e39d2fbeeac3"
+    },
+    {
+      "name": "statefulset.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/statefulset.json",
+      "sha256": "c6f136bfc54d97776e716d06c63ab224807a004f81c2d3b38cb9f37e0306c173"
+    },
+    {
+      "name": "daemonset.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/daemonset.json",
+      "sha256": "000fd61e78d428689eb7fcda3f536b832c362a4fb9af3d54c7177d92f08bb737"
+    },
+    {
+      "name": "job.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/job.json",
+      "sha256": "37f3ece18df4521cf8e01430939e7bb5d3b0fd51bb7bd04ea0f151efecfba4a9"
+    },
+    {
+      "name": "cronjob.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/cronjob.json",
+      "sha256": "3c869b7a01fbf1c6faaeefd092ad6686d72edcc297215f99407a4466b5bef33b"
+    },
+    {
+      "name": "ingress.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/ingress.json",
+      "sha256": "768a77ec0fa32a9b4dbe3ad4e72095502a2fdf792f5775ae3aaecb3e2518d77f"
+    },
+    {
+      "name": "persistentvolumeclaim.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/persistentvolumeclaim.json",
+      "sha256": "8e4bbff7592cf8bd140905f829aa8067ce4fdc2c16e6a79ca5d8c2efc3c08384"
+    },
+    {
+      "name": "persistentvolume.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/persistentvolume.json",
+      "sha256": "41c1cc1d07794e5a24b6c526479638dd687a4bdcf0cdb49a2d4652c00886e309"
+    },
+    {
+      "name": "serviceaccount.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/serviceaccount.json",
+      "sha256": "dd71e8bcb8514b858b41757f8c52389440d40ffe5631880cc7f3dce6afab64b5"
+    },
+    {
+      "name": "role.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/role.json",
+      "sha256": "106f50305e0ab4a40d1f0226b145c7d810d9132b7a0ccd51bc30f04d86111897"
+    },
+    {
+      "name": "rolebinding.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/rolebinding.json",
+      "sha256": "5ecfefb13412f7aec1387b35e48a36ed9b3e4aef07efae87503be9c405ae50c3"
+    },
+    {
+      "name": "clusterrole.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/clusterrole.json",
+      "sha256": "5b35631b2aa7e349269562742607d2e54fe5922ee5bf1579a1eceb58ce86f206"
+    },
+    {
+      "name": "clusterrolebinding.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/clusterrolebinding.json",
+      "sha256": "6b5f9ea8b2615e8338b540610246db8872e0265714a007c0e62f4f7b55ca48e4"
+    },
+    {
+      "name": "networkpolicy.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/networkpolicy.json",
+      "sha256": "27f3585e855fdc1b16d843b1b9e85e3deca92d333e62fae03d8ada5bda113777"
+    },
+    {
+      "name": "horizontalpodautoscaler.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/horizontalpodautoscaler.json",
+      "sha256": "0b9db2d2c32f878641b267db9fd4fe020a89522cb62727ecc459a8dda3950e24"
+    },
+    {
+      "name": "poddisruptionbudget.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/poddisruptionbudget.json",
+      "sha256": "49787a1692ac39dfb98239b1b0d5238736b7da4e77ebf6f014e18c35ff594aaa"
+    },
+    {
+      "name": "resourcequota.json",
+      "url": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/102361970337d65537d40141dc29b991b8e95786/v1.32.0-standalone-strict/resourcequota.json",
+      "sha256": "4b39616e37715cc84964eaa9eff9d28886893904d4f24fffffd2dcffaa61af0b"
+    }
+  ]
+}

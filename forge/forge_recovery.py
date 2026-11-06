@@ -1,5 +1,6 @@
 """Restore only services proven active before a configured GPU handoff."""
 import json
+import fcntl
 import re
 import shlex
 import subprocess
@@ -20,14 +21,17 @@ def units(command, verb):
 
 def install(g):
     original_free, original_release = g['shape_free'], g['release_shape_server']
-    def ledger():
+    def journal(change=None):
         path = g['FORGE_HOME'] / 'service-handoffs.json'
-        try:
-            return json.loads(path.read_text())
-        except FileNotFoundError:
-            return []
-    def save(rows):
-        control.atomic(g['FORGE_HOME'] / 'service-handoffs.json', rows)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.with_suffix('.lock').open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try: rows = json.loads(path.read_text())
+            except FileNotFoundError: rows = []
+            if change is not None:
+                rows = change(rows)
+                control.atomic(path, rows)
+            return rows
     def key(srv):
         return srv['name'], srv.get('ssh', srv.get('machine', srv['name']))
     def configured(cfg):
@@ -43,7 +47,7 @@ def install(g):
             command = 'systemctl --user start ' + ' '.join(shlex.quote(unit) for unit in row['units'])
             if not g['_shape_ssh'](srv, command, 'restoring recorded services'):
                 raise g['ForgeError']('service restoration failed; handoff journal retained')
-            save([item for item in ledger() if item != row])
+            journal(lambda rows: [item for item in rows if item != row])
     def free(srv):
         stopped = units(srv.get('free_cmd'), 'stop')
         if not stopped or set(stopped) != set(units(srv.get('restore_cmd'), 'start')):
@@ -61,12 +65,12 @@ def install(g):
         if active:
             owner = control.owner('shape handoff'); owner.pop('thread', None)
             row = dict(name=srv['name'], host=host, units=active, owner=owner)
-            save([*ledger(), row])  # crash between recording and stop is safely recoverable
+            journal(lambda rows: [*rows, row])  # record before stopping services
             if not g['_shape_ssh'](srv, 'systemctl --user stop '+' '.join(map(shlex.quote,active)), 'freeing GPU'):
                 raise g['ForgeError']('service stop failed; handoff journal retained')
         g['_SHAPE_FREED'].add(srv['name'])
     def release(cfg, srv, wait=True):
-        matches = [r for r in ledger() if (r['name'],r['host']) == key(srv)]
+        matches = [r for r in journal() if (r['name'],r['host']) == key(srv)]
         if not matches:
             return original_release(cfg, srv, wait)
         for row in matches:
@@ -74,7 +78,7 @@ def install(g):
         g['_SHAPE_FREED'].discard(srv['name'])
     def recover(cfg, apply=False):
         results = []
-        for row in ledger():
+        for row in journal():
             srv = next((s for s in configured(cfg) if key(s) == (row['name'],row['host']) and
                         set(row['units']) <= set(units(s.get('restore_cmd'),'start')) and
                         set(row['units']) <= set(units(s.get('free_cmd'),'stop'))), None)

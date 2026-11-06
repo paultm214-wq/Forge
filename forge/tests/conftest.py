@@ -31,6 +31,7 @@ def isolate(tmp_path, monkeypatch):
     monkeypatch.setattr(forge, "TEST_PRELUDE", "")
     monkeypatch.setattr(forge, "PROJECT_MODULE", None)
     monkeypatch.setattr(forge, "TOOLCHAIN", "python")
+    monkeypatch.setattr(forge, "TOOLCHAIN_PROFILE", "")
     monkeypatch.setattr(forge, "PRIOR_ART_TEXT", "")
     monkeypatch.setattr(forge, "SANDBOX_MOUNTS", [])
     monkeypatch.setattr(forge, "SANDBOX_ENV", {})

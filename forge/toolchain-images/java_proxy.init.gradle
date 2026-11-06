@@ -1,0 +1,8 @@
+def proxy = System.getenv('HTTPS_PROXY') ?: System.getenv('https_proxy')
+if (proxy) {
+    def endpoint = new URI(proxy)
+    ['http', 'https'].each { protocol ->
+        System.setProperty(protocol + '.proxyHost', endpoint.host)
+        System.setProperty(protocol + '.proxyPort', String.valueOf(endpoint.port > 0 ? endpoint.port : 80))
+    }
+}
