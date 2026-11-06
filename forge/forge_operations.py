@@ -287,6 +287,10 @@ def install(g):
         recovery = g["recover_services"](cfg, True)
         if recovery:
             g["STATUS"].set(service_recovery=recovery)
+        if any(row.get("state") == "failed" for row in recovery):
+            raise g["ForgeError"](
+                "service recovery failed; inspect forge recover before resuming"
+            )
         return original_inner(run, cfg)
 
     g["_execute"] = inner
@@ -383,16 +387,28 @@ def install(g):
         import sys
 
         argv = list(sys.argv[1:] if argv is None else argv)
+        index = 0
+        while index < len(argv):
+            if argv[index] == "--config":
+                index += 2
+            elif argv[index].startswith("--config="):
+                index += 1
+            else:
+                break
+        command = argv[index] if index < len(argv) else None
+        has_flag = lambda flag: any(
+            x == flag or x.startswith(flag + "=") for x in argv[index + 1 :]
+        )
         new = (
-            any(x in ("replay", "control", "recover") for x in argv)
-            or "check" in argv
-            and "--toolchains" in argv
-            or "selftest" in argv
-            and "--profile" in argv
+            command in ("replay", "control", "recover")
+            or command == "check"
+            and has_flag("--toolchains")
+            or command == "selftest"
+            and has_flag("--profile")
         )
         if not new:
-            if "resume" in argv:
-                i = argv.index("resume")
+            if command == "resume":
+                i = index
                 if len(argv) > i + 1 and control.requested(
                     Path(argv[i + 1]).expanduser()
                 ) in ("pause", "cancel"):
@@ -446,6 +462,7 @@ def install(g):
                 or any(
                     r["smoke"]["status"] == "failed" for r in data.get("toolchains", [])
                 )
+                or any(r.get("state") == "failed" for r in data.get("services", []))
             )
         except (g["ForgeError"], OSError, ValueError, KeyError) as error:
             print(json.dumps(dict(error=str(error))))

@@ -240,3 +240,28 @@ def test_strata_tokens_per_second():
     assert out["state"] == "prompt" and out["tps"] == 0.0
     s.state = "idle"
     assert w.poll()["state"] == "idle"
+
+
+def test_toolchain_health_is_visible_without_a_run(hub):
+    h, _, tmp = hub
+    health = tmp / "health.json"
+    h.cfg["toolchain_health"] = str(health)
+    health.write_text(json.dumps({"observed_at": "2000-01-01T00:00:00+00:00",
+        "host": {"hostname": "another host", "architecture": "other"},
+        "toolchains": [{"name": "python-app", "status": "installed", "smoke": {"status": "passed", "validated_at": "2000-01-01T00:00:00+00:00"}}]}))
+    state = h.read_forge()
+    assert state["present"] is False
+    assert state["toolchain_health"]["stale"]
+    assert state["toolchain_health"]["toolchains"][0]["smoke"]["stale"]
+
+
+def test_cooperative_control_requires_active_run_and_uses_offline_cli(hub, monkeypatch):
+    import subprocess
+    h, _, tmp = hub
+    monkeypatch.setattr(h, "read_forge", lambda: {"present": True, "run_dir": str(tmp), "alive": True})
+    calls = []
+    monkeypatch.setattr(hubmod.subprocess, "run", lambda args, **kwargs: calls.append(args) or subprocess.CompletedProcess(args, 0, "{}", ""))
+    assert h.forge_command("pause")[0] == 200
+    assert calls[0][-3:] == ["control", str(tmp), "pause"]
+    monkeypatch.setattr(h, "read_forge", lambda: {"present": True, "run_dir": str(tmp), "alive": False})
+    assert h.forge_command("cancel")[0] == 409

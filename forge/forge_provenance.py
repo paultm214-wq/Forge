@@ -83,6 +83,13 @@ def mesh_signature(path):
             offset += 8 + n
         if doc is None or binary is None:
             return None
+        buffers = doc.get("buffers", [])
+        if (
+            len(buffers) != 1
+            or buffers[0].get("uri")
+            or not 0 <= buffers[0]["byteLength"] <= len(binary)
+        ):
+            return None
         points, remainder = [], bytearray(binary)
         for mesh in doc.get("meshes", []):
             for primitive in mesh.get("primitives", []):
@@ -105,6 +112,12 @@ def mesh_signature(path):
                     v.get("byteStride", 12),
                 )
                 if start < 0 or stride < 12:
+                    return None
+                end = a["count"] * stride - stride + 12 if a["count"] else 0
+                if (
+                    a.get("byteOffset", 0) < 0
+                    or a.get("byteOffset", 0) + end > v["byteLength"]
+                ):
                     return None
                 for i in range(a["count"]):
                     pos = start + i * stride

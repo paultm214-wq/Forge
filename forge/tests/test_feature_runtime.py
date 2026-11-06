@@ -104,7 +104,7 @@ def test_explicit_image_tolerance_leaves_exact_default(tmp_path):
     assert not provenance.compare(record, root, image_tolerance=0.01)["verified"]
 
 
-def make_glb(points, indices=(0, 1, 2)):
+def make_glb(points, indices=(0, 1, 2), external=False):
     import struct
 
     positions = b"".join(struct.pack("<3f", *p) for p in points)
@@ -127,6 +127,8 @@ def make_glb(points, indices=(0, 1, 2)):
         ],
         "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]}],
     }
+    if external:
+        doc["buffers"][0]["uri"] = "external.bin"
     metadata = json.dumps(doc).encode()
     metadata += b" " * (-len(metadata) % 4)
     return (
@@ -152,6 +154,12 @@ def test_mesh_tolerance_requires_matching_topology_and_vertex_correspondence(tmp
     assert not provenance.compare(record, root, mesh_tolerance=0.01)["verified"]
     path.write_bytes(make_glb([points[1], points[0], points[2]]))
     assert not provenance.compare(record, root, mesh_tolerance=0.01)["verified"]
+
+
+def test_external_geometry_is_never_claimed_as_a_supported_glb_signature(tmp_path):
+    path = tmp_path / "external.glb"
+    path.write_bytes(make_glb([(0, 0, 0), (1, 0, 0), (0, 1, 0)], external=True))
+    assert provenance.mesh_signature(path) is None
 
 
 def fake_docker(args):
@@ -197,7 +205,7 @@ def hold(root, ready):
 
 
 def test_gpu_recovers_dead_owner_but_never_steals_live_claim(tmp_path):
-    ctx = multiprocessing.get_context("fork")
+    ctx = multiprocessing.get_context("spawn")
     event = ctx.Event()
     child = ctx.Process(target=hold, args=(str(tmp_path), event))
     child.start()
@@ -504,3 +512,27 @@ def test_native_worker_rejects_wrong_platform_and_unapproved_bytes(tmp_path):
     artifact.write_bytes(b"unapproved")
     with pytest.raises(ValueError, match="approved build"):
         worker.sign(artifact, tmp_path / "out", "0" * 64, "certificate selector")
+
+
+def test_legacy_spec_filename_is_not_treated_as_a_new_command(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "control").write_text("# A project named control\n")
+    cfg = tmp_path / "config.toml"
+    cfg.write_text('[paths]\nruns="' + str(tmp_path / "runs") + '"\n')
+    seen = []
+    monkeypatch.setattr(forge, "execute", lambda run, cfg: seen.append(run.spec))
+    assert forge.main(["--config", str(cfg), "run", "control"]) == 0
+    assert seen == ["# A project named control\n"]
+
+
+def test_recovery_failure_has_nonzero_cli_status_and_stops_model_work(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setattr(
+        forge, "recover_services", lambda *a: [{"state": "failed", "name": "shapes"}]
+    )
+    assert forge.main(["recover", "--apply"]) == 1
+    assert json.loads(capsys.readouterr().out)["services"][0]["state"] == "failed"
+    run = make_run(tmp_path, plan=dict(project="p", chunks=[]))
+    with pytest.raises(forge.ForgeError, match="service recovery failed"):
+        forge.execute(run, {"paths": {"runs": str(run.root.parent)}})
