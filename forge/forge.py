@@ -6547,11 +6547,6 @@ def release_shape_server(cfg: dict, srv: dict, wait: bool = True) -> None:
     """Tell the shape server to let go of the GPU (it starts sd-server
     again), start what free_cmd stopped (restore_cmd), then wait until that
     machine's image server answers."""
-    if srv["name"] in _SHAPE_FREED:
-        _SHAPE_FREED.discard(srv["name"])
-        if srv.get("restore_cmd"):
-            threading.Thread(target=_shape_ssh, args=(srv, srv["restore_cmd"], "giving the GPU back"),
-                             daemon=True).start()
     try:
         req = urllib.request.Request(srv["url"].rstrip("/") + "/v1/release", data=b"{}",
                                      headers={"Content-Type": "application/json"})
@@ -6561,6 +6556,11 @@ def release_shape_server(cfg: dict, srv: dict, wait: bool = True) -> None:
         log(f"shapes: could not release {srv['name']} ({exc}) - it releases itself when idle",
             "WARN")
         return
+    if srv["name"] in _SHAPE_FREED:
+        _SHAPE_FREED.discard(srv["name"])
+        if srv.get("restore_cmd"):
+            threading.Thread(target=_shape_ssh, args=(srv, srv["restore_cmd"], "giving the GPU back"),
+                             daemon=True).start()
     if not wait:
         return
     machine = srv.get("machine", srv["name"])

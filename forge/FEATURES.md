@@ -172,6 +172,17 @@ shape-server GPU release. Failed restoration retains its journal. Arbitrary
 legacy shell handoff commands continue to work but cannot be inferred into a
 safe automatic service-recovery recipe.
 
+Compatibility: restoration is now dispatched after the shape server's release
+response, including legacy shell handoffs. Failed managed recovery returns a
+nonzero CLI status and stops the run before model work. GPU resource aliases
+must use letters, numbers, underscores, hyphens or dots (maximum 128 characters,
+no `..`); rename unusual existing aliases before using the FIFO.
+
+Deploy the complete Forge directory or run the updated installer: the new
+sibling runtime modules are required. Copying only `forge.py` or `forge_game.py`
+is no longer a complete installation. Existing config keys and CLI commands
+remain supported; the new commands, profiles and artifact formats are additive.
+
 ## Native desktop workers
 
 ```sh

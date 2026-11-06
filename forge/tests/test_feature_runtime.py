@@ -536,3 +536,40 @@ def test_recovery_failure_has_nonzero_cli_status_and_stops_model_work(
     run = make_run(tmp_path, plan=dict(project="p", chunks=[]))
     with pytest.raises(forge.ForgeError, match="service recovery failed"):
         forge.execute(run, {"paths": {"runs": str(run.root.parent)}})
+
+
+def test_legacy_service_restore_is_dispatched_after_gpu_release(monkeypatch):
+    import types
+
+    events = []
+
+    class ImmediateThread:
+        def __init__(self, target, args, **kwargs):
+            self.target, self.args = target, args
+
+        def start(self):
+            self.target(*self.args)
+
+    class Threads:
+        Thread = ImmediateThread
+
+        def __getattr__(self, name):
+            return getattr(threading, name)
+
+    monkeypatch.setattr(forge, "threading", Threads())
+    monkeypatch.setattr(forge, "_SHAPE_FREED", {"shape"})
+    monkeypatch.setattr(
+        forge, "_shape_ssh", lambda *args: events.append("restore") or True
+    )
+
+    def released(*args, **kwargs):
+        events.append("release")
+        return types.SimpleNamespace(close=lambda: None)
+
+    monkeypatch.setattr(forge.urllib.request, "urlopen", released)
+    forge.release_shape_server(
+        {},
+        {"name": "shape", "url": "http://shape", "restore_cmd": "custom restore"},
+        wait=False,
+    )
+    assert events == ["release", "restore"]
